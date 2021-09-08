@@ -4,7 +4,7 @@ import numpy as np
 import ipdb
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import icosahedron as ico
+import icosahedron as ico#local file
 
 
 def vmf(mu, kappa, x):
@@ -26,14 +26,57 @@ numbumps = 50
 w = np.random.rand(numbumps)
 w = w/np.sum(w)
 x = ico.icosphere(30, 1.3) #np.random.randn(3,5000)
+ind = (x[0,:]**2+x[1,:]**2+x[2,:]**2)>=(np.median((x[0,:]**2+x[1,:]**2+x[2,:]**2))-.0001)
+x = x[:,ind] #fix to having zero values
 xnormed = x/np.linalg.norm(x, axis=0)
-xx = xnormed.copy()*0
+xx = np.zeros_like(xnormed)
+
 for i in range(numbumps):
     kappa = np.random.randint(1, 200)
     mu = np.random.randn(3); mu = mu/np.linalg.norm(mu)
     y = apply_vmf(xnormed, mu, kappa)
     xx += w[i]*y
+
+
+
 ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
+#for i in range(xx.shape[0]):
+#    for j in range(xx.shape[0]):
+#        print(np.cos(xx[i,:],xx[j,:]))
+
+#print(np.dot(xx,xx.T))
+
+cos_sim = np.dot(xx.T, xx)/(np.linalg.norm(xx.T)*np.linalg.norm(xx))
+
+from datetime import datetime
+
+# datetime object containing current date and time
+now = datetime.now()
+start = now.strftime("%d/%m/%Y %H:%M:%S")
+
+print('start', start)
+
+
+#from sklearn.metrics.pairwise import cosine_similarity
+#from scipy import sparse
+
+count = 0
+for i in range(xx.shape[1]):
+    j = i+1
+    while j < xx.shape[1]:
+        if np.dot(xx.T[i, :], xx[:, j]) / (np.linalg.norm(xx.T[i, :]) * np.linalg.norm(xx[:, j])) >1.0-.0001:
+            print('ij',i,j)
+            count+=1
+        j+=1
+
+now = datetime.now()
+end = now.strftime("%d/%m/%Y %H:%M:%S")
+
+print('start', start)
+
+print('end', end)
+print('num duplicates',count)
+
 #plt.gca().set_aspect(1)
 #plt.axis('off')
-plt.show()
+#plt.show()
