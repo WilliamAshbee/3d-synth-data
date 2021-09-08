@@ -46,7 +46,7 @@ ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap
 
 #print(np.dot(xx,xx.T))
 
-cos_sim = np.dot(xx.T, xx)/(np.linalg.norm(xx.T)*np.linalg.norm(xx))
+#cos_sim = np.dot(xx.T, xx)/(np.linalg.norm(xx.T)*np.linalg.norm(xx))
 
 from datetime import datetime
 
@@ -57,17 +57,30 @@ start = now.strftime("%d/%m/%Y %H:%M:%S")
 print('start', start)
 
 
-#from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 #from scipy import sparse
 
-count = 0
-for i in range(xx.shape[1]):
-    j = i+1
-    while j < xx.shape[1]:
-        if np.dot(xx.T[i, :], xx[:, j]) / (np.linalg.norm(xx.T[i, :]) * np.linalg.norm(xx[:, j])) >1.0-.0001:
-            print('ij',i,j)
-            count+=1
-        j+=1
+#count = 0
+#for i in range(xx.shape[1]):
+#    j = i+1
+#    while j < xx.shape[1]:
+ #       if np.dot(xx.T[i, :], xx[:, j]) / (np.linalg.norm(xx.T[i, :]) * np.linalg.norm(xx[:, j])) >1.0-.0001:
+#            print('ij',i,j)
+ #           count+=1
+ #       j+=1
+#
+similarities = cosine_similarity(xx.T)
+for i in range(similarities.shape[0]):
+    similarities[i,i] = -1.0
+
+similarities = similarities>.999999
+for i in range(similarities.shape[0]):
+    xx[:,similarities[:,i] == True] = np.array([0.0,0.0,0.0]) #debug this
+
+#then just remove zero point values or
+print(similarities.shape)
+print(np.max(similarities))
+print(np.min(similarities))
 
 now = datetime.now()
 end = now.strftime("%d/%m/%Y %H:%M:%S")
@@ -75,7 +88,7 @@ end = now.strftime("%d/%m/%Y %H:%M:%S")
 print('start', start)
 
 print('end', end)
-print('num duplicates',count)
+#print('num duplicates',count)
 
 #plt.gca().set_aspect(1)
 #plt.axis('off')
