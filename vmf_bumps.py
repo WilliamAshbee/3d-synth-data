@@ -40,13 +40,6 @@ for i in range(numbumps):
 
 
 ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
-#for i in range(xx.shape[0]):
-#    for j in range(xx.shape[0]):
-#        print(np.cos(xx[i,:],xx[j,:]))
-
-#print(np.dot(xx,xx.T))
-
-#cos_sim = np.dot(xx.T, xx)/(np.linalg.norm(xx.T)*np.linalg.norm(xx))
 
 from datetime import datetime
 
@@ -58,17 +51,7 @@ print('start', start)
 
 
 from sklearn.metrics.pairwise import cosine_similarity
-#from scipy import sparse
 
-#count = 0
-#for i in range(xx.shape[1]):
-#    j = i+1
-#    while j < xx.shape[1]:
- #       if np.dot(xx.T[i, :], xx[:, j]) / (np.linalg.norm(xx.T[i, :]) * np.linalg.norm(xx[:, j])) >1.0-.0001:
-#            print('ij',i,j)
- #           count+=1
- #       j+=1
-#
 similarities = cosine_similarity(xx.T)
 
 similarities = similarities>.999999
