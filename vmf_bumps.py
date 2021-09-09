@@ -70,25 +70,25 @@ from sklearn.metrics.pairwise import cosine_similarity
  #       j+=1
 #
 similarities = cosine_similarity(xx.T)
-for i in range(similarities.shape[0]):
-    similarities[i,i] = -1.0
 
 similarities = similarities>.999999
-for i in range(similarities.shape[0]):
-    xx[:,similarities[:,i] == True] = np.array([0.0,0.0,0.0]) #debug this
 
-#then just remove zero point values or
-print(similarities.shape)
-print(np.max(similarities))
-print(np.min(similarities))
+similarities = np.triu(similarities)#upper triangular
+np.fill_diagonal(similarities,0)#fill diagonal
 
+similarities = np.sum(similarities,axis=0)
+
+similarities = similarities == 0
+
+print('keep' , np.sum(similarities))
+xx = xx[:,similarities]
+print(xx.shape)
 now = datetime.now()
 end = now.strftime("%d/%m/%Y %H:%M:%S")
 
 print('start', start)
 
 print('end', end)
-#print('num duplicates',count)
 
 #plt.gca().set_aspect(1)
 #plt.axis('off')
