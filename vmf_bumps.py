@@ -37,9 +37,8 @@ for i in range(numbumps):
     y = apply_vmf(xnormed, mu, kappa)
     xx += w[i]*y
 
-
-
-ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
+xx = xx-np.mean(xx,axis=1).reshape(3,1)
+print(np.mean(xx,axis=1),'mean')
 
 from datetime import datetime
 
@@ -52,7 +51,10 @@ print('start', start)
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-similarities = cosine_similarity(xx.T)
+xxtemp = (xx*(1.0/np.linalg.norm(xx,axis=0).reshape(1,-1)))
+#ax.scatter(xxtemp[0,:], xxtemp[1,:], xxtemp[2,:], c=np.linalg.norm(xxtemp,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
+
+similarities = cosine_similarity(xxtemp.T)
 
 similarities = similarities>.999999
 
@@ -61,7 +63,7 @@ np.fill_diagonal(similarities,0)#fill diagonal
 
 similarities = np.sum(similarities,axis=0)
 
-similarities = similarities == 0
+similarities = similarities == 0 #keep values that are no one's duplicates
 
 print('keep' , np.sum(similarities))
 xx = xx[:,similarities]
@@ -76,3 +78,5 @@ print('end', end)
 #plt.gca().set_aspect(1)
 #plt.axis('off')
 #plt.show()
+ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
+plt.show()
