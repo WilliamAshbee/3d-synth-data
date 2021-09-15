@@ -97,20 +97,25 @@ from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 global numpoints
 numpoints = 9002
 side = 8
-
+sf = .99999
 xs = np.zeros((side,side,side))
 ys = np.zeros((side,side,side))
 zs = np.zeros((side,side,side))
 
 for i in range(side):
-    xs[i,:,:] = i+1
-    ys[:,i,:] = i+1
-    zs[:,:,i] = i+1
+    xs[i,:,:] = i
+    ys[:,i,:] = i
+    zs[:,:,i] = i
 
 def rasterToXYZ(r):
     a = np.copy(r)
-    a[r!=1]=-1
-    return (xs*a)[(xs*a)>0],(ys*a)[(ys*a)>0],(zs*a)[(zs*a)>0]
+    xr = (xs * a)[r == 1]
+
+    yr = (ys * a)[r == 1]
+
+    zr = (zs * a)[r == 1]
+
+    return xr,yr,zr
 
 def mutated_icosphere_matrix(length=10,canvas_dim=8):
     points = torch.zeros(length, numpoints, 3).type(torch.FloatTensor)
@@ -122,6 +127,7 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
         xx = (xx - np.expand_dims(np.min(xx, axis=1), axis=1)) * np.expand_dims(
             1.0 / (np.max(xx, axis=1) - np.min(xx, axis=1)), axis=1)
         xx = torch.from_numpy(xx)
+        xx = xx*sf
         print(xx.shape)
         x = xx[0,:]
         print(x.shape)
@@ -132,7 +138,7 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
         points[l, :, 1] = y[:]  # modified for lstm discriminator
         points[l, :, 2] = z[:]  # modified for lstm discriminator
 
-        canvas[l, (x*(side-1.0)).type(torch.LongTensor), (y*(side-1.0)).type(torch.LongTensor), (z*(side-1.0)).type(torch.LongTensor)] = 1.0
+        canvas[l, (x*side).type(torch.LongTensor), (y*side).type(torch.LongTensor), (z*side).type(torch.LongTensor)] = 1.0
 
 
     return {
@@ -162,7 +168,7 @@ def plot_one(fig,img, xx, i=0):
 
     #ax.set_yticklabels([])
 
-    ax.scatter(xx[:, 0]*side, xx[:, 1]*side,xx[:, 2]*side, s=.01, c='red',cmap=plt.cm.inferno)
+    ax.scatter(xx[:, 0]*side*sf, xx[:, 1]*side*sf,xx[:, 2]*side*sf, s=.01, c='red',cmap=plt.cm.inferno)
     #xx = xx+.5
     gtx,gty,gtz = rasterToXYZ(img)
     print('gt size',gtx.shape,gty.shape,gtz.shape)
@@ -177,20 +183,14 @@ def plot_one(fig,img, xx, i=0):
     gty = torch.from_numpy(gty)
     gtz = torch.from_numpy(gtz)
 
+    print('maxes')
+    print("xx from points")
     print(torch.max(xx[:, 0]), torch.max(xx[:, 1]), torch.max(xx[:, 2]))
+    print(torch.min(xx[:, 0]), torch.min(xx[:, 1]), torch.min(xx[:, 2]))
+    print('gtxyz from raster')
     print(torch.max(gtx), torch.max(gty), torch.max(gtz))
     print(torch.min(gtx), torch.min(gty), torch.min(gtz))
 
-    print('maxes',
-          torch.abs(torch.max(xx[:, 0]) - torch.max(gtx)),
-          torch.abs(torch.max(xx[:, 1]) - torch.max(gty)),
-          torch.abs(torch.max(xx[:, 2]) - torch.max(gtz))
-          )
-    print('mins',
-          torch.abs(torch.min(xx[:, 0]) - torch.min(gtx)),
-          torch.abs(torch.min(xx[:, 1]) - torch.min(gty)),
-          torch.abs(torch.min(xx[:, 2]) - torch.min(gtz))
-          )
 
 
 
