@@ -79,5 +79,8 @@ for i in range(numbumps):
 #plt.show()
 
 ax = plt.axes(projection ='3d')
-ax.scatter(xx[0,:], xx[1,:], xx[2,:], c=np.linalg.norm(xx,axis=0)-1, s=0.5, cmap=plt.cm.inferno)
+xx = (xx-np.expand_dims(np.min(xx,axis=1),axis=1))*np.expand_dims(1.0/(np.max(xx,axis=1)-np.min(xx,axis=1)),axis=1)
+ranges = np.max(xx,axis=1)-np.min(xx,axis=1)
+print('ranges',ranges.shape,ranges)
+ax.scatter(xx[0,:], xx[1,:], xx[2,:],  s=0.5, cmap=plt.cm.inferno)
 plt.show()
