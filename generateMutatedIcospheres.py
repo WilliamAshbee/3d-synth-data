@@ -107,13 +107,17 @@ for i in range(side):
     ys[:,i,:] = i
     zs[:,:,i] = i
 
-def rasterToXYZ(r):
+def rasterToXYZ(r):#may need to be between 0 and 7 instead of 0 and side*sf
     a = np.copy(r)
     xr = (xs * a)[r == 1]
 
     yr = (ys * a)[r == 1]
 
     zr = (zs * a)[r == 1]
+
+    xr = side*sf*(xr - np.min(xr)) * (1.0 / (np.max(xr) - np.min(xr)))
+    yr = side*sf*(yr - np.min(yr)) * (1.0 / (np.max(yr) - np.min(yr)))
+    zr = side*sf*(zr - np.min(zr)) * (1.0 / (np.max(zr) - np.min(zr)))
 
     return xr,yr,zr
 
