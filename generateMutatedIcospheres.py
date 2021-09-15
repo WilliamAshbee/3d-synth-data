@@ -119,6 +119,8 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
 
     for l in range(length):
         xx = createOneMutatedIcosphere()
+        xx = (xx - np.expand_dims(np.min(xx, axis=1), axis=1)) * np.expand_dims(
+            1.0 / (np.max(xx, axis=1) - np.min(xx, axis=1)), axis=1)
         xx = torch.from_numpy(xx)
         print(xx.shape)
         x = xx[0,:]
@@ -130,7 +132,7 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
         points[l, :, 1] = y[:]  # modified for lstm discriminator
         points[l, :, 2] = z[:]  # modified for lstm discriminator
 
-        canvas[l, x.type(torch.LongTensor), y.type(torch.LongTensor), z.type(torch.LongTensor)] = 1.0
+        canvas[l, (x*(side-1.0)).type(torch.LongTensor), (y*(side-1.0)).type(torch.LongTensor), (z*(side-1.0)).type(torch.LongTensor)] = 1.0
 
 
     return {
@@ -154,18 +156,43 @@ def plot_one(fig,img, xx, i=0):
     assert len(s) == 9002
     assert len(c) == predres
     #ax = plt.axes(projection='3d')
-    #plt.scatter(xx[:,0], xx[:,1], s=.01, c='red')
     ax = fig.add_subplot(10, 10, i + 1,projection='3d')
     ax.set_axis_off()
     #ax.set_xticklabels([])
 
     #ax.set_yticklabels([])
 
-    #ax.scatter(xx[:, 0], xx[:, 1],xx[:, 2], s=.01, c='red',cmap=plt.cm.inferno)
+    ax.scatter(xx[:, 0]*side, xx[:, 1]*side,xx[:, 2]*side, s=.01, c='red',cmap=plt.cm.inferno)
     #xx = xx+.5
     gtx,gty,gtz = rasterToXYZ(img)
-    print(gtx.shape,gty.shape,gtz.shape)
+    print('gt size',gtx.shape,gty.shape,gtz.shape)
     ax.scatter(gtx, gty, gtz, s=.01, c='black')
+
+    print('begin')
+    print('xxshape', xx.shape)
+    print('tempmax', torch.max(xx[:, 0]))
+
+    #print('shapes',np.max(xx[:, 0]).shape , np.max(gtx).shape)
+    gtx = torch.from_numpy(gtx)
+    gty = torch.from_numpy(gty)
+    gtz = torch.from_numpy(gtz)
+
+    print(torch.max(xx[:, 0]), torch.max(xx[:, 1]), torch.max(xx[:, 2]))
+    print(torch.max(gtx), torch.max(gty), torch.max(gtz))
+    print(torch.min(gtx), torch.min(gty), torch.min(gtz))
+
+    print('maxes',
+          torch.abs(torch.max(xx[:, 0]) - torch.max(gtx)),
+          torch.abs(torch.max(xx[:, 1]) - torch.max(gty)),
+          torch.abs(torch.max(xx[:, 2]) - torch.max(gtz))
+          )
+    print('mins',
+          torch.abs(torch.min(xx[:, 0]) - torch.min(gtx)),
+          torch.abs(torch.min(xx[:, 1]) - torch.min(gty)),
+          torch.abs(torch.min(xx[:, 2]) - torch.min(gtz))
+          )
+
+
 
 
 #plt.plot(xs.cpu().numpy(), ys.cpu().numpy(), ',-', color='red', ms=.3, lw=.3)
