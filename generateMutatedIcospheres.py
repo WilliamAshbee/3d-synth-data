@@ -96,15 +96,21 @@ from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 global numpoints
 numpoints = 9002
-side = 32
+side = 8
 
-rows = torch.zeros(32, 32)
-columns = torch.zeros(32, 32)
+xs = np.zeros((side,side,side))
+ys = np.zeros((side,side,side))
+zs = np.zeros((side,side,side))
 
-for i in range(32):
-    columns[:, i] = i
-    rows[i, :] = i
+for i in range(side):
+    xs[i,:,:] = i+1
+    ys[:,i,:] = i+1
+    zs[:,:,i] = i+1
 
+def rasterToXYZ(r):
+    a = np.copy(r)
+    a[r!=1]=-1
+    return (xs*a)[(xs*a)>0],(ys*a)[(ys*a)>0],(zs*a)[(zs*a)>0]
 
 def mutated_icosphere_matrix(length=10,canvas_dim=8):
     points = torch.zeros(length, numpoints, 3).type(torch.FloatTensor)
@@ -155,9 +161,12 @@ def plot_one(fig,img, xx, i=0):
 
     #ax.set_yticklabels([])
 
-    ax.scatter(xx[:, 0], xx[:, 1], s=.01, c='red')
+    #ax.scatter(xx[:, 0], xx[:, 1],xx[:, 2], s=.01, c='red',cmap=plt.cm.inferno)
     #xx = xx+.5
-    #ax.scatter(xx[:, 0], xx[:, 1], s=.01, c='black')
+    gtx,gty,gtz = rasterToXYZ(img)
+    print(gtx.shape,gty.shape,gtz.shape)
+    ax.scatter(gtx, gty, gtz, s=.01, c='black')
+
 
 #plt.plot(xs.cpu().numpy(), ys.cpu().numpy(), ',-', color='red', ms=.3, lw=.3)
     # plt.gca().add_artist(ascatter)
