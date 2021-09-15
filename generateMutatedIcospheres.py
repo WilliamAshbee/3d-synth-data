@@ -73,14 +73,193 @@ maxs = 0
 mins = 1000000
 
 np.random.seed(0)
+"""
 for i in range(mutIcos.shape[0]):
 
     mutIco = createOneMutatedIcosphere()
     mutIcos[i,:,:] = mutIco
+"""
 #    if i%200 == 0:
 #        print(maxs, mins)
 #    maxs = np.max([maxs,mutIco.shape[1]])
 #    mins = np.min([mins, mutIco.shape[1]])
 
 
+import torch
+import numpy as np
+import pylab as plt
+#from skimage import filters
+import math
 
+from torch.utils import data
+from torch.utils.data import DataLoader, TensorDataset, RandomSampler
+
+global numpoints
+numpoints = 9002
+side = 32
+
+rows = torch.zeros(32, 32)
+columns = torch.zeros(32, 32)
+
+for i in range(32):
+    columns[:, i] = i
+    rows[i, :] = i
+
+
+def mutated_icosphere_matrix(length=10,canvas_dim=8):
+    points = torch.zeros(length, numpoints, 3).type(torch.FloatTensor)
+    canvas = torch.zeros(length,canvas_dim,canvas_dim,canvas_dim).type(torch.FloatTensor)
+
+
+    for l in range(length):
+        xx = createOneMutatedIcosphere()
+        xx = torch.from_numpy(xx)
+        print(xx.shape)
+        x = xx[0,:]
+        print(x.shape)
+        y = xx[1,:]
+        z = xx[2,:]
+
+        points[l, :, 0] = x[:]  # modified for lstm discriminator
+        points[l, :, 1] = y[:]  # modified for lstm discriminator
+        points[l, :, 2] = z[:]  # modified for lstm discriminator
+
+        canvas[l, x.type(torch.LongTensor), y.type(torch.LongTensor), z.type(torch.LongTensor)] = 1.0
+
+
+    return {
+        'canvas': canvas,
+        'points': points.type(torch.FloatTensor)}
+
+
+def plot_one(fig,img, xx, i=0):
+    #print(img.shape, xs.shape, ys.shape)
+    print(xx.shape)
+    #plt.subplot(10, 10, i + 1,projection='3d')
+    #plt.imshow(img, cmap=plt.cm.gray_r)
+
+    predres = numpoints
+    s = [.001 for x in range(predres)]
+    assert len(s) == predres
+    c = ['red' for x in range(predres)]
+
+
+    s = [.01 for x in range(predres)]
+    assert len(s) == 9002
+    assert len(c) == predres
+    #ax = plt.axes(projection='3d')
+    #plt.scatter(xx[:,0], xx[:,1], s=.01, c='red')
+    ax = fig.add_subplot(10, 10, i + 1,projection='3d')
+    ax.set_axis_off()
+    #ax.set_xticklabels([])
+
+    #ax.set_yticklabels([])
+
+    ax.scatter(xx[:, 0], xx[:, 1], s=.01, c='red')
+    #xx = xx+.5
+    #ax.scatter(xx[:, 0], xx[:, 1], s=.01, c='black')
+
+#plt.plot(xs.cpu().numpy(), ys.cpu().numpy(), ',-', color='red', ms=.3, lw=.3)
+    # plt.gca().add_artist(ascatter)
+    #plt.axis('off')
+
+
+def plot_all(sample=None, model=None, labels=None, i=0):
+    # make prediction
+    # plot one prediction
+    # or plot one ground truth
+    if model != None:
+        with torch.no_grad():
+            global numpoints
+
+            print('preloss')
+            loss, out = mse_vit(sample.cuda(), labels.cuda(), model=model, ret_out=True)
+            print('loss', loss)
+            fig = plt.figure()
+            for i in range(100):
+                img = sample[i, 0, :, :].squeeze().cpu().numpy()
+                X = out[i, :1000, 0]
+                Y = out[i, -1000:, 1]
+
+                plot_one(fig,img, X, Y, i=i)
+
+
+    else:
+        print(sample.shape, labels.shape)
+        fig = plt.figure()
+        for i in range(100):
+            img = sample[i, :, :,:].squeeze().cpu().numpy()
+            xx = labels[i, :]
+
+            plot_one(fig,img, xx, i=i)
+
+
+class MutatedIcospheresDataset(torch.utils.data.Dataset):
+    """Donut dataset."""
+
+    def __init__(self, length=10,canvas_dim = 8):
+        """
+        Args:
+            csv_file (string): Path to the csv file with annotations.
+            root_dir (string): Directory with all the images.
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+        """
+        self.length = length
+        self.values = mutated_icosphere_matrix(length,canvas_dim)
+        self.canvas_dim = canvas_dim
+        assert self.values['canvas'].shape[0] == self.length
+        assert self.values['points'].shape[0] == self.length
+
+        count = 0
+        for i in range(self.length):
+            a = self[i]
+            c = a[0][0, :, :]
+            for el in a[1]:
+                y, x = (int)(el[1]), (int)(el[0])
+
+                if x < side - 2 and x > 2 and y < side - 2 and y > 2:
+                    if c[y, x] != 1 and \
+                            c[y + 1, x] != 1 and c[y + 1, -1 + x] != 1 and c[y + 1, 1 + x] != 1 and \
+                            c[y - 1, x] != 1 and c[y, -1 + x] != 1 and c[y, 1 + x] != 1:
+                        count += 1
+        assert count == 0
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        canvas = self.values["canvas"]
+
+        canvas = canvas[idx, :, :]
+
+        # assert canvas.shape == (side,side) or canvas.shape == (len(idx))
+
+        points = self.values["points"]
+        points = points[idx, :]
+        #if len(canvas.shape) == 2:
+        #    canvas = torch.stack([canvas, canvas, canvas], dim=0)
+        #else:
+        #    canvas = torch.stack([canvas, canvas, canvas], dim=1)
+
+        return canvas, points
+
+    @staticmethod
+    def displayCanvas(title, loader, model):
+        # model.setBatchSize(batch_size = 1)
+
+        for sample, labels in loader:
+            plot_all(sample=sample, model=model, labels=labels)
+            break
+        plt.savefig(title, dpi=600)
+
+
+dataset = MutatedIcospheresDataset(length=100)
+
+mini_batch = 100
+loader_demo = data.DataLoader(
+    dataset,
+    batch_size=mini_batch,
+    sampler=RandomSampler(data_source=dataset),
+    num_workers=2)
+MutatedIcospheresDataset.displayCanvas('mutatedicospheres.png', loader_demo, model=None)
