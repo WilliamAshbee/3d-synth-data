@@ -12,278 +12,27 @@ import numpy as np
 from scipy import *
 from math import *
 import matplotlib.pyplot as plt
-"""
-def vmf(mu, kappa, x):
-    # single point function
-    d = mu.shape[0]
-    # compute in the log space
-    logvmf = (d//2-1) * np.log(kappa) - np.log((2*pi)**(d/2)*besseli(d//2-1,kappa)) + kappa * np.dot(mu,x)
-    return np.exp(logvmf)
-
-def pol2cart(r, phi):
-    x = r*np.cos(phi)
-    y = r*np.sin(phi)
-    return np.array([x,y])
-    
-def cart2pol(x,y):
-    th = atan2(y,x)
-    r = sqrt(x**2+y**2)
-    return th,r
-
-
-def apply_vmf(x, mu, kappa):
-    y = []
-    for i in range(x.shape[1]):
-        phi, rho = cart2pol(x[0,i], x[1,i])
-        delta = vmf(mu, kappa, x[:,i])
-        xi, yi = pol2cart(rho+delta, phi)
-        y.append(np.array([xi,yi]).T)
-    return np.asarray(y).T
-
-
-x = np.random.randn(2,1000)
-xnormed = x/np.linalg.norm(x, axis=0)
-mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-y = apply_vmf(xnormed, mu, 20)
-plt.plot(y[0,:], y[1,:], '.')
-"""
 
 from scipy.special import iv as besseli
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import *
 from math import *
-"""
-def vmf(mu, kappa, x):
-    # single point function
-    d = mu.shape[0]
-    # compute in the log space
-    logvmf = (d//2-1) * np.log(kappa) - np.log((2*pi)**(d/2)*besseli(d//2-1,kappa)) + kappa * np.dot(mu,x)
-    return np.exp(logvmf)
 
-def pol2cart(r, phi):
-    x = r*np.cos(phi)
-    y = r*np.sin(phi)
-    return np.array([x,y])
-
-def cart2pol(x,y):
-    th = atan2(y,x)
-    r = sqrt(x**2+y**2)
-    return th,r
-
-def apply_vmf(x, mu, kappa, norm=1.0):
-    y = []
-    for i in range(x.shape[1]):
-        phi, rho = cart2pol(x[0,i], x[1,i])
-        delta = vmf(mu, kappa, x[:,i])
-        xi, yi = pol2cart(rho+delta, phi)
-        y.append(np.array([xi,yi]).T/norm)
-    return np.asarray(y).T
-
-plt.clf()
-for i in range(10):
-    x = np.random.randn(2,1000)
-    xnormed = x/np.linalg.norm(x, axis=0)
-
-    kappa = np.random.randint(5, 100)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    y = apply_vmf(xnormed, mu, kappa)
-    plt.plot(y[0,:], y[1,:], '.')
-"""
-
-"""plt.clf()
-x = np.random.randn(2,3000)
-xnormed = x/np.linalg.norm(x, axis=0)
-for i in range(20):
-    kappa = np.random.randint(0, 150)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    y = apply_vmf(xnormed, mu, kappa)
-    plt.plot(y[0,:], y[1,:], '.', ms=1)
-plt.gca().set_aspect(1)
-plt.axis('off')
-
-def apply_vmf(x, mu, kappa, norm=5.0):
-    y = []
-    for i in range(x.shape[1]):
-        phi, rho = cart2pol(x[0,i], x[1,i])
-        delta = vmf(mu, kappa, x[:,i])
-        xi, yi = pol2cart(rho+delta/norm, phi)
-        y.append(np.array([xi,yi]).T)
-    return np.asarray(y).T
-
-plt.clf()
-x = np.random.randn(2,3000)
-xnormed = x/np.linalg.norm(x, axis=0)
-for i in range(20):
-    kappa = np.random.randint(0, 150)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    y = apply_vmf(xnormed, mu, kappa)
-    plt.plot(y[0,:], y[1,:], '.', ms=1)
-plt.gca().set_aspect(1)
-plt.axis('off')
-
-plt.clf()
-x = np.random.randn(2,3000)
-xnormed = x/np.linalg.norm(x, axis=0)
-for i in range(1):
-    kappa = np.random.randint(0, 150)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    y = apply_vmf(xnormed, mu, kappa)
-    plt.plot(y[0,:], y[1,:], '.', ms=1)
-plt.gca().set_aspect(1)
-plt.axis('off')
-
-def apply_vmf(x, mu, kappa, norm=5.0):
-    print('mu',mu,type(mu))
-    y = []
-    for i in range(x.shape[1]):
-        phi, rho = cart2pol(x[0,i], x[1,i])
-        delta = vmf(mu, kappa, x[:,i])
-        xi, yi = pol2cart(rho+delta/norm, phi)
-        y.append(np.array([xi,yi]).T)
-    return np.asarray(y).T
-
-plt.clf()
-x = np.random.randn(2,3000)
-xnormed = x/np.linalg.norm(x, axis=0)
-for i in range(10):
-    kappa = np.random.randint(0, 150)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    kappa = 50
-    mu = np.array([-1.0,0.0])
-    y = apply_vmf(xnormed, mu, kappa)
-    plt.plot(y[0,:], y[1,:], '.', ms=1)
-plt.gca().set_aspect(1)
-#plt.axis('off')
-"""
 
 from scipy.special import iv as besseli
 import pylab as plt
 import numpy as np
 
-"""def vmf(mu, kappa, x):
-    # single point function
-    d = mu.shape[0]
-    # compute in the log space
-    logvmf = (d//2-1) * np.log(kappa) - np.log((2*np.pi)**(d/2)*besseli(d//2-1,kappa)) + kappa * np.dot(mu,x)
-    return np.exp(logvmf)
-
-def apply_vmf(x, mu, kappa, norm=1.0):
-    delta = 1.0+vmf(mu, kappa, x)
-    y = x * np.c_[delta,delta].T
-    return y
-
-
-plt.clf()
-w = np.random.rand(11)
-w = w/np.sum(w)
-x = np.random.randn(2,2000)
-xnormed = x/np.linalg.norm(x, axis=0)
-xx = xnormed.copy()*w[0]
-for i in range(10):
-    kappa = np.random.randint(5, 100)
-    mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-    y = apply_vmf(xnormed, mu, kappa)
-    xx += w[i+1]*y
-    plt.plot(xx[0,:], xx[1,:], '.', ms=1)
-    print(xx.shape)
-plt.gca().set_aspect(1)
-#plt.axis('off')
-"""
-
-from scipy.special import iv as besseli
-import pylab as plt
-import numpy as np
-"""
-def vmf(mu, kappa, x):
-    # single point function
-    d = mu.shape[0]
-    # compute in the log space
-    logvmf = (d//2-1) * np.log(kappa) - np.log((2*np.pi)**(d/2)*besseli(d//2-1,kappa)) + kappa * np.dot(mu,x)
-    return np.exp(logvmf)
-
-def apply_vmf(x, mu, kappa, norm=1.0):
-    delta = 1.0+vmf(mu, kappa, x)
-    y = x * np.c_[delta,delta].T
-    return y
-
-pltfig = True
-numfigs = 2500
-numpoints = 2000
-dimensions = 2
-
-#dataset = np.zeros(numfigs,dimensions, numpoints)
-for k in range(100):
-  #plt.clf()
-  if pltfig:
-    fig = plt.figure()
-  w = np.random.rand(11)
-  w = w/np.sum(w)
-  x = np.random.randn(dimensions,numpoints)
-  xnormed = x/np.linalg.norm(x, axis=0)
-  xx = xnormed.copy()*w[0]
-  it = 10
-  for i in range(it):
-      kappa = np.random.randint(5, 100)
-      mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-      y = apply_vmf(xnormed, mu, kappa)
-      xx += w[i+1]*y
-  if pltfig:
-    plt.plot(xx[0,:], xx[1,:], '.-', ms=1)
-    print(xx.shape)
-    plt.gca().set_aspect(1)
-    #plt.show()
-    #plt.savefig('sergey.png',dpi=600)
-    plt.close()
-    #plt.axis('off')
-"""
 
 from scipy.special import iv as besseli
 import pylab as plt
 import numpy as np
 
-"""
-def vmf(mu, kappa, x):
-    # single point function
-    d = mu.shape[0]
-    # compute in the log space
-    logvmf = (d//2-1) * np.log(kappa) - np.log((2*np.pi)**(d/2)*besseli(d//2-1,kappa)) + kappa * np.dot(mu,x)
-    return np.exp(logvmf)
+from scipy.special import iv as besseli
+import pylab as plt
+import numpy as np
 
-def apply_vmf(x, mu, kappa, norm=1.0):
-    delta = 1.0+vmf(mu, kappa, x)
-    y = x * np.c_[delta,delta].T
-    return y
-
-pltfig = True
-numfigs = 100
-numpoints = 2000
-dimensions = 2
-
-x = np.random.randn(numfigs,dimensions, numpoints)
-for k in range(numfigs):
-  #plt.clf()
-  if pltfig:
-    fig = plt.figure()
-  w = np.random.rand(11)
-  w = w/np.sum(w)
-  #x = np.random.randn(dimensions,numpoints)
-  xnormed = x[k,:,:]/np.linalg.norm(x[k,:,:], axis=0)
-  xx = xnormed.copy()*w[0]
-  it = 10
-  for i in range(it):
-      kappa = np.random.randint(5, 100)
-      mu = np.random.randn(2); mu = mu/np.linalg.norm(mu)
-      y = apply_vmf(xnormed, mu, kappa)
-      xx += w[i+1]*y
-  x[k,:,:] = xx
-  if pltfig:
-    plt.plot(x[k,0,:], x[k,1,:], '.', ms=1)
-    print(xx.shape)
-    plt.gca().set_aspect(1)
-    #plt.axis('off')
-    plt.show()
-"""
 
 from scipy.special import iv as besseli
 import pylab as plt
@@ -523,6 +272,7 @@ class DonutDataset(torch.utils.data.Dataset):
           plot_all(sample = sample,model=model, labels = labels)
           break
         plt.savefig(title,dpi=600)
+        plt.clf()
 
 dataset = DonutDataset(length = 100)
 
@@ -552,7 +302,6 @@ loader_train = data.DataLoader(
     sampler=RandomSampler(data_source=train_dataset),
     num_workers=4)
 
-!pip install vit-pytorch
 
 import torch
 from vit_pytorch import ViT
@@ -598,7 +347,7 @@ optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#
 
 
 
-for epoch in range(100):
+for epoch in range(1):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
