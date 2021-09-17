@@ -19,6 +19,13 @@ import numpy as np
 from scipy import *
 from math import *
 
+from scipy.special import iv as besseli
+import pylab as plt
+import numpy as np
+
+from scipy.special import iv as besseli
+import pylab as plt
+import numpy as np
 
 from scipy.special import iv as besseli
 import pylab as plt
@@ -29,17 +36,18 @@ from scipy.special import iv as besseli
 import pylab as plt
 import numpy as np
 
-from scipy.special import iv as besseli
-import pylab as plt
+import torch
 import numpy as np
-
-
-from scipy.special import iv as besseli
 import pylab as plt
-import numpy as np
+from skimage import filters
+import math
 
+from torch.utils import data
+from torch.utils.data import DataLoader, TensorDataset, RandomSampler
+global xbaseline
 xbaseline = np.random.randn(2, 1000)
-  
+
+
 
 def vmf(mu, kappa, x):
     # single point function
@@ -55,6 +63,7 @@ def apply_vmf(x, mu, kappa, norm=1.0):
 
 
 def createDataset(pltFig = True,numFigs = 100,numPoints = 1000):
+  global xbaseline
   dimensions = 2
   #x = np.random.randn(numFigs,dimensions, numPoints)
   ##create an ordered circle instead of a permuted circle
@@ -95,35 +104,6 @@ def createDataset(pltFig = True,numFigs = 100,numPoints = 1000):
 
   return x  
 
-x = createDataset(pltFig = True)
-
-from numpy.core.function_base import linspace
-from numpy.linalg import linalg
-x = np.random.randn(10,2, 1000)
-xnormed = x[0,:,:]/np.linalg.norm(x[0,:,:], axis=0)
-#x = np.random.randn(numFigs,dimensions, numPoints)
-x = np.zeros((1000,2,1000))    
-print(np.max(xnormed[0,:]),np.min(xnormed[0,:]))
-
-#print(np.linspace(0, 2.0*3.14, num=1000))
-theta = np.linspace(0, 2.0*3.14, num=1000)
-xx = np.cos(theta)
-yy = np.sin(theta)
-x[:,0,:]= xx
-x[:,1,:]= yy
-assert np.sum(x[0,0,:]!=x[1,0,:])==0
-assert np.sum(x[0,1,:]!=x[1,1,:])==0
-
-#print (x[0],x[-1],y[0],y[-1])
-
-import torch
-import numpy as np
-import pylab as plt
-from skimage import filters
-import math
-
-from torch.utils import data
-from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 
 global numpoints
@@ -144,9 +124,10 @@ def convex_combination_matrix(length = 10):
     
     canvas = torch.zeros((length,side, side))
     points = createDataset(pltFig = False,numFigs=length,numPoints=1000).transpose(0,2,1)
-    maxP = np.max(points)
-    minP = np.min(points)
-    points = (points - minP)*26.0 / (maxP - minP)+3.0
+    print('pointshape',points.shape)
+    maxP = np.max(points,axis=1).reshape(length,1,2)
+    minP = np.min(points,axis=1).reshape(length,1,2)
+    points = (points - minP)*side*.999999 *(1.0/ (maxP - minP))
     points = torch.from_numpy(points)
 
     
@@ -169,10 +150,7 @@ def convex_combination_matrix(length = 10):
         'points':points}
 
 def plot_one(img,xs,ys,i=0):
-  print(img.shape,xs.shape,ys.shape)
   plt.subplot(10,10,i+1)
-  #print(type(img))
-  #print(np.max(img))
   plt.imshow(img.T, cmap=plt.cm.gray_r)
   predres = 1000
   s = [.001 for x in range(predres)]
@@ -180,7 +158,6 @@ def plot_one(img,xs,ys,i=0):
   c = ['red' for x in range(predres)]
   assert len(c) == predres
   plt.plot(xs.cpu().numpy(),ys.cpu().numpy(),',', color='red',ms=.3,lw=.3)
-  #plt.gca().add_artist(ascatter)
   plt.axis('off')
 
 def plot_all( sample = None, model = None, labels = None, i = 0):
@@ -210,8 +187,6 @@ def plot_all( sample = None, model = None, labels = None, i = 0):
         #print(np.sum('img',img))
         X = labels[i,:,0]
         Y = labels[i,:,1]
-        #print('x',np.max(X,dim=None),np.min(X,dim=None))
-        #print('y',np.max(Y,dim=None),np.min(Y,dim=None))
         plot_one(img,X,Y,i=i)
         
         
@@ -230,31 +205,13 @@ class DonutDataset(torch.utils.data.Dataset):
         assert self.values['canvas'].shape[0] == self.length
         assert self.values['points'].shape[0] == self.length
         
-        """count = 0
-        for i in range(self.length):
-          a = self[i]
-          c = a[0][0,:,:]
-          for el in a[1]:
-            y,x = (int)(el[1]),(int)(el[0])
-            
-            if x < side-2 and x > 2 and y < side-2 and y > 2: 
-              if c[y,x] != 1 and \
-                c[y+1,x] != 1 and c[y+1,-1+x] != 1 and c[y+1,1+x] != 1 and \
-                c[y-1,x] != 1 and c[y,-1+x] != 1 and c[y,1+x] != 1:
-                count+=1
-        assert count ==0
-        """
     def __len__(self):
         return self.length
 
 
     def __getitem__(self, idx):
         canvas = self.values["canvas"]
-        
         canvas = canvas[idx,:,:]
-
-        #assert canvas.shape == (side,side) or canvas.shape == (len(idx))
-        
         points = self.values["points"]
         points = points[idx,:]
         if len(canvas.shape) == 2:
@@ -327,17 +284,12 @@ img = torch.randn(100, 3, 32, 32)
 
 preds = v(img) # (1, 1000)
 
-#model = resnet18(pretrained=False,progress=True, num_classes = 2000).cuda()
-#model = wide_resnet101_2(pretrained=False,progress=True, num_classes = 2000).cuda()
-
 model = v.cuda()
 
 def mse_vit(input, target,model=None,ret_out = False):
   out = model(input)
-  #print('out,target',out.shape,target.shape)
   out = out.reshape(target.shape)#64, 1000, 2
   out = out*32.0
-  #print('mse_cnn',out.shape,target.shape)
   if not ret_out:
     return torch.mean((out-target)**2)
   else:
@@ -347,24 +299,19 @@ optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#
 
 
 
-for epoch in range(1):
+for epoch in range(10):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
     y = y.cuda()
-    #print('x,y',x.shape,y.shape)
     loss = mse_vit(x,y,model=model)
     loss.backward()
     optimizer.step()
   print('epoch',epoch,'loss',loss)
-    #print(out.shape)
 
 model = model.eval()
-#dataset = DonutDataset(length = 100)
 DonutDataset.displayCanvas('vit-training-1.png',loader_train, model = model)
 
-from torch.utils import data
-from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 mini_batch = 100
 dataset = DonutDataset(length = 100)
@@ -382,7 +329,5 @@ for x,y in loader_test:
   print('validation loss',loss)
   break
 
-#model = model.eval()
-#dataset = DonutDataset(length = 100)
 DonutDataset.displayCanvas('vit-test-set-1.png',loader_test, model = model)
 
