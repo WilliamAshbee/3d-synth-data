@@ -252,7 +252,7 @@ from torch.utils import data
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 mini_batch = 100
-train_dataset = DonutDataset(length = 1000*20)
+train_dataset = DonutDataset(length = 1000*2)
 loader_train = data.DataLoader(
     train_dataset, 
     batch_size=mini_batch,
@@ -265,7 +265,7 @@ from vit_pytorch import ViT
 
 v = ViT(
     image_size = 32,
-    patch_size = 8,
+    patch_size = 4,
     num_classes = 2000,
     dim = 2048,
     depth = 6,
@@ -297,9 +297,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-
-
-for epoch in range(10):
+for epoch in range(100):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -308,6 +306,20 @@ for epoch in range(10):
     loss.backward()
     optimizer.step()
   print('epoch',epoch,'loss',loss)
+
+optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+
+for epoch in range(100):
+  for x,y in loader_train:
+    optimizer.zero_grad()
+    x = x.cuda()
+    y = y.cuda()
+    loss = mse_vit(x,y,model=model)
+    loss.backward()
+    optimizer.step()
+  print('epoch',epoch,'loss',loss)
+
+
 
 model = model.eval()
 DonutDataset.displayCanvas('vit-training-1.png',loader_train, model = model)
