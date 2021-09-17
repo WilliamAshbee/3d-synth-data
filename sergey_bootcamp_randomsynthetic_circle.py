@@ -68,16 +68,19 @@ def createDataset(pltFig = True,numFigs = 100,numPoints = 1000):
   #x = np.random.randn(numFigs,dimensions, numPoints)
   ##create an ordered circle instead of a permuted circle
   x = np.zeros((numFigs,dimensions, numPoints))   #this could get interesting! why does it fail on the random permuted version 
+  #######################
   xnormed = xbaseline
   xnormed = xnormed/np.linalg.norm(xnormed, axis=0)
   x[:,:,:] = xnormed
-  #theta = np.linspace(0, 2.0*3.14, num=1000)
-  #xx = np.cos(theta)
-  #yy = np.sin(theta)
-  #x[:,0,:]= xx
-  #x[:,1,:]= yy
-  #assert np.sum(x[0,0,:]!=x[1,0,:])==0
-  #assert np.sum(x[0,1,:]!=x[1,1,:])==0
+  #####################
+  # theta = np.linspace(0, 2.0*3.14, num=1000)
+  # xx = np.cos(theta)
+  # yy = np.sin(theta)
+  # x[:,0,:]= xx
+  # x[:,1,:]= yy
+  ######################
+  ##assert np.sum(x[0,0,:]!=x[1,0,:])==0
+  ##assert np.sum(x[0,1,:]!=x[1,1,:])==0
 
   for k in range(numFigs):
     #plt.clf()
@@ -297,7 +300,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(100):
+for epoch in range(200):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -309,7 +312,7 @@ for epoch in range(100):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-for epoch in range(100):
+for epoch in range(200):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -339,7 +342,11 @@ for x,y in loader_test:
   y = y.cuda()
   loss = mse_vit(x,y,model=model)
   print('validation loss',loss)
+  # with open('validation.txt','w') as f:
+  #   f.write('validation loss is ')
+  #   f.write(loss)
+  #   f.flush()
   break
 
-DonutDataset.displayCanvas('vit-test-set-1.png',loader_test, model = model)
+DonutDataset.displayCanvas('vit-test-set-1-randomorder.png',loader_test, model = model)
 
