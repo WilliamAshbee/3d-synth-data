@@ -3,7 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import icosahedron as ico#local file
 from datetime import datetime
+from sklearn.metrics.pairwise import cosine_similarity
 
+import torch
+import numpy as np
+import pylab as plt
+import math
+
+from torch.utils import data
+from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 def vmf(mu, kappa, x):
     # single point function
@@ -16,9 +24,6 @@ def apply_vmf(x, mu, kappa, norm=1.0):
     delta = 1.0+vmf(mu, kappa, x)
     y = x * np.vstack([np.power(delta,3)]*x.shape[0])
     return y
-
-
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 def dedup(mat):
@@ -68,56 +73,37 @@ def createOneMutatedIcosphere():
 
     return xx
 
-mutIcos = np.zeros((1,3,9002))
-maxs = 0
-mins = 1000000
 
 np.random.seed(0)
-"""
-for i in range(mutIcos.shape[0]):
 
-    mutIco = createOneMutatedIcosphere()
-    mutIcos[i,:,:] = mutIco
-"""
-#    if i%200 == 0:
-#        print(maxs, mins)
-#    maxs = np.max([maxs,mutIco.shape[1]])
-#    mins = np.min([mins, mutIco.shape[1]])
-
-
-import torch
-import numpy as np
-import pylab as plt
-#from skimage import filters
-import math
-
-from torch.utils import data
-from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 global numpoints
 numpoints = 9002
-side = 8
+side = 32
 sf = .99999
 xs = np.zeros((side,side,side))
 ys = np.zeros((side,side,side))
 zs = np.zeros((side,side,side))
 
 for i in range(side):
-    xs[i,:,:] = i
-    ys[:,i,:] = i
-    zs[:,:,i] = i
+    xs[i,:,:] = i+.5
+    ys[:,i,:] = i+.5
+    zs[:,:,i] = i+.5
 
 def rasterToXYZ(r):#may need to be between 0 and 7 instead of 0 and side*sf
+    #may be better to just keep it between 0 and 1 
     a = np.copy(r)
     xr = (xs * a)[r == 1]
-
     yr = (ys * a)[r == 1]
-
     zr = (zs * a)[r == 1]
 
-    xr = side*sf*(xr - np.min(xr)) * (1.0 / (np.max(xr) - np.min(xr)))
-    yr = side*sf*(yr - np.min(yr)) * (1.0 / (np.max(yr) - np.min(yr)))
-    zr = side*sf*(zr - np.min(zr)) * (1.0 / (np.max(zr) - np.min(zr)))
+    #xr = side*sf*(xr - np.min(xr)) * (1.0 / (np.max(xr) - np.min(xr)))
+    #yr = side*sf*(yr - np.min(yr)) * (1.0 / (np.max(yr) - np.min(yr)))
+    #zr = side*sf*(zr - np.min(zr)) * (1.0 / (np.max(zr) - np.min(zr)))
+
+    #xr = side*xr
+    #yr = side*yr
+    #zr = side*zr
 
     return xr,yr,zr
 
@@ -134,15 +120,20 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
         xx = xx*sf
         print(xx.shape)
         x = xx[0,:]
-        print(x.shape)
         y = xx[1,:]
         z = xx[2,:]
 
+        print('xyzshape',x.shape,y.shape,z.shape)
+        
+        print('x range',torch.max(x),torch.min(x))
+        print('y range',torch.max(y),torch.min(y))
+        print('z range',torch.max(z),torch.min(z))
+        
         points[l, :, 0] = x[:]  # modified for lstm discriminator
         points[l, :, 1] = y[:]  # modified for lstm discriminator
         points[l, :, 2] = z[:]  # modified for lstm discriminator
-
-        canvas[l, (x*side).type(torch.LongTensor), (y*side).type(torch.LongTensor), (z*side).type(torch.LongTensor)] = 1.0
+        
+        canvas[l, (x*side*sf).type(torch.LongTensor), (y*side*sf).type(torch.LongTensor), (z*side*sf).type(torch.LongTensor)] = 1.0
 
 
     return {
@@ -151,38 +142,30 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
 
 
 def plot_one(fig,img, xx, i=0):
-    #print(img.shape, xs.shape, ys.shape)
     print(xx.shape)
-    #plt.subplot(10, 10, i + 1,projection='3d')
-    #plt.imshow(img, cmap=plt.cm.gray_r)
-
     predres = numpoints
     s = [.001 for x in range(predres)]
     assert len(s) == predres
     c = ['red' for x in range(predres)]
-
-
     s = [.01 for x in range(predres)]
     assert len(s) == 9002
     assert len(c) == predres
-    #ax = plt.axes(projection='3d')
     ax = fig.add_subplot(10, 10, i + 1,projection='3d')
     ax.set_axis_off()
-    #ax.set_xticklabels([])
 
-    #ax.set_yticklabels([])
-
-    ax.scatter(xx[:, 0]*side*sf, xx[:, 1]*side*sf,xx[:, 2]*side*sf, s=.01, c='red',cmap=plt.cm.inferno)
-    #xx = xx+.5
+    redx = xx[:, 0]*side*sf
+    redy = xx[:, 1]*side*sf
+    redz = xx[:, 2]*side*sf
+    print()
+    ax.scatter(xx[:, 0]*side*sf, xx[:, 1]*side*sf,xx[:, 2]*side*sf, marker=',',  c='red',s=.005,lw=.005)
     gtx,gty,gtz = rasterToXYZ(img)
     print('gt size',gtx.shape,gty.shape,gtz.shape)
-    ax.scatter(gtx, gty, gtz, s=.01, c='black')
+    ax.scatter(gtx, gty, gtz, marker = ',', c='black',s=.005,lw=.005)
 
     print('begin')
     print('xxshape', xx.shape)
     print('tempmax', torch.max(xx[:, 0]))
 
-    #print('shapes',np.max(xx[:, 0]).shape , np.max(gtx).shape)
     gtx = torch.from_numpy(gtx)
     gty = torch.from_numpy(gty)
     gtz = torch.from_numpy(gtz)
@@ -191,23 +174,16 @@ def plot_one(fig,img, xx, i=0):
     print("xx from points")
     print(torch.max(xx[:, 0]), torch.max(xx[:, 1]), torch.max(xx[:, 2]))
     print(torch.min(xx[:, 0]), torch.min(xx[:, 1]), torch.min(xx[:, 2]))
+    print('from redx,redy,redz')
+    print(torch.max(redx), torch.max(redy), torch.max(redz))
+    print(torch.min(redx), torch.min(redy), torch.min(redz))
+    
     print('gtxyz from raster')
     print(torch.max(gtx), torch.max(gty), torch.max(gtz))
     print(torch.min(gtx), torch.min(gty), torch.min(gtz))
 
 
-
-
-
-#plt.plot(xs.cpu().numpy(), ys.cpu().numpy(), ',-', color='red', ms=.3, lw=.3)
-    # plt.gca().add_artist(ascatter)
-    #plt.axis('off')
-
-
 def plot_all(sample=None, model=None, labels=None, i=0):
-    # make prediction
-    # plot one prediction
-    # or plot one ground truth
     if model != None:
         with torch.no_grad():
             global numpoints
@@ -222,29 +198,18 @@ def plot_all(sample=None, model=None, labels=None, i=0):
                 Y = out[i, -1000:, 1]
 
                 plot_one(fig,img, X, Y, i=i)
-
-
     else:
         print(sample.shape, labels.shape)
         fig = plt.figure()
         for i in range(100):
             img = sample[i, :, :,:].squeeze().cpu().numpy()
             xx = labels[i, :]
-
             plot_one(fig,img, xx, i=i)
 
 
 class MutatedIcospheresDataset(torch.utils.data.Dataset):
-    """Donut dataset."""
-
     def __init__(self, length=10,canvas_dim = 8):
-        """
-        Args:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
+        canvas_dim=side
         self.length = length
         self.values = mutated_icosphere_matrix(length,canvas_dim)
         self.canvas_dim = canvas_dim
@@ -270,28 +235,19 @@ class MutatedIcospheresDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         canvas = self.values["canvas"]
-
         canvas = canvas[idx, :, :]
-
-        # assert canvas.shape == (side,side) or canvas.shape == (len(idx))
-
         points = self.values["points"]
         points = points[idx, :]
-        #if len(canvas.shape) == 2:
-        #    canvas = torch.stack([canvas, canvas, canvas], dim=0)
-        #else:
-        #    canvas = torch.stack([canvas, canvas, canvas], dim=1)
 
         return canvas, points
 
     @staticmethod
     def displayCanvas(title, loader, model):
-        # model.setBatchSize(batch_size = 1)
-
         for sample, labels in loader:
             plot_all(sample=sample, model=model, labels=labels)
             break
-        plt.savefig(title, dpi=600)
+        plt.savefig(title, dpi=1200)
+        plt.clf()
 
 
 dataset = MutatedIcospheresDataset(length=100)
