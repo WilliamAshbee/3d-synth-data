@@ -18,32 +18,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import *
 from math import *
+#import pylab as plt
 
-from scipy.special import iv as besseli
-import pylab as plt
-import numpy as np
-
-from scipy.special import iv as besseli
-import pylab as plt
-import numpy as np
-
-from scipy.special import iv as besseli
-import pylab as plt
-import numpy as np
-
-
-from scipy.special import iv as besseli
-import pylab as plt
-import numpy as np
 
 import torch
-import numpy as np
-import pylab as plt
 from skimage import filters
 import math
 
 from torch.utils import data
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
+from vit_pytorch import ViT
+
 global xbaseline
 xbaseline = np.random.randn(2, 1000)
 
@@ -65,30 +50,16 @@ def apply_vmf(x, mu, kappa, norm=1.0):
 def createDataset(pltFig = True,numFigs = 100,numPoints = 1000):
   global xbaseline
   dimensions = 2
-  #x = np.random.randn(numFigs,dimensions, numPoints)
-  ##create an ordered circle instead of a permuted circle
   x = np.zeros((numFigs,dimensions, numPoints))   #this could get interesting! why does it fail on the random permuted version 
-  #######################
   xnormed = xbaseline
   xnormed = xnormed/np.linalg.norm(xnormed, axis=0)
   x[:,:,:] = xnormed
-  #####################
-  # theta = np.linspace(0, 2.0*3.14, num=1000)
-  # xx = np.cos(theta)
-  # yy = np.sin(theta)
-  # x[:,0,:]= xx
-  # x[:,1,:]= yy
-  ######################
-  ##assert np.sum(x[0,0,:]!=x[1,0,:])==0
-  ##assert np.sum(x[0,1,:]!=x[1,1,:])==0
-
+  
   for k in range(numFigs):
-    #plt.clf()
     if pltFig:
       fig = plt.figure()
     w = np.random.rand(11)
     w = w/np.sum(w)
-    #x = np.random.randn(dimensions,numpoints)
     xnormed = x[k,:,:]#/np.linalg.norm(x[k,:,:], axis=0)
     xx = x[k,:,:]*w[0]
     it = 10
@@ -102,7 +73,6 @@ def createDataset(pltFig = True,numFigs = 100,numPoints = 1000):
       plt.plot(x[k,0,:], x[k,1,:], ',-', ms=1)
       print(xx.shape)
       plt.gca().set_aspect(1)
-      #plt.axis('off')
       plt.show()
 
   return x  
@@ -142,8 +112,6 @@ def convex_combination_matrix(length = 10):
     for l in range(length):
         canvas[l,points[l,:,0].type(torch.LongTensor),points[l,:,1].type(torch.LongTensor)]=1.0
         
-        #points[l,:,0] = x[l,:]#modified for lstm discriminator
-        #points[l,:,1] = y[l,:]#modified for lstm discriminator 
     
     print('canvshape',canvas.shape)
     print('sumcanvas',torch.sum(canvas)/length)
@@ -226,7 +194,6 @@ class DonutDataset(torch.utils.data.Dataset):
     
     @staticmethod
     def displayCanvas(title,loader, model):
-        #model.setBatchSize(batch_size = 1)
         
         for sample, labels in loader:
           plot_all(sample = sample,model=model, labels = labels)
@@ -244,15 +211,7 @@ loader_demo = data.DataLoader(
     num_workers=2)
 DonutDataset.displayCanvas('donut.png',loader_demo, model = None)
 
-a = np.random.randn(3,2,1)
-print(type(a))
 
-a.shape
-
-a.transpose(0,2,1).shape
-
-from torch.utils import data
-from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 mini_batch = 100
 train_dataset = DonutDataset(length = 1000*2)
@@ -263,8 +222,6 @@ loader_train = data.DataLoader(
     num_workers=4)
 
 
-import torch
-from vit_pytorch import ViT
 
 v = ViT(
     image_size = 32,
@@ -292,7 +249,7 @@ model = v.cuda()
 def mse_vit(input, target,model=None,ret_out = False):
   out = model(input)
   out = out.reshape(target.shape)#64, 1000, 2
-  out = out*32.0
+  out = out*32.0#fix this
   if not ret_out:
     return torch.mean((out-target)**2)
   else:
@@ -300,7 +257,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(200):
+for epoch in range(20):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -312,7 +269,7 @@ for epoch in range(200):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-for epoch in range(200):
+for epoch in range(2):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -342,10 +299,6 @@ for x,y in loader_test:
   y = y.cuda()
   loss = mse_vit(x,y,model=model)
   print('validation loss',loss)
-  # with open('validation.txt','w') as f:
-  #   f.write('validation loss is ')
-  #   f.write(loss)
-  #   f.flush()
   break
 
 DonutDataset.displayCanvas('vit-test-set-1-randomorder.png',loader_test, model = model)
