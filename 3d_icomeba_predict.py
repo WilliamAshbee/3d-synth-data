@@ -170,9 +170,9 @@ def plot_one(fig,img, xx, i=0):
     #print('xxshape', xx.shape)
     #print('tempmax', torch.max(xx[:, 0]))
 
-    gtx = torch.from_numpy(gtx)
-    gty = torch.from_numpy(gty)
-    gtz = torch.from_numpy(gtz)
+    #gtx = torch.from_numpy(gtx)
+    #gty = torch.from_numpy(gty)
+    #gtz = torch.from_numpy(gtz)
 
     #print('maxes')
     #print("xx from points")
@@ -308,7 +308,10 @@ def mse_vit(input, target,model=None,ret_out = False):
     #print('targetshape',target.shape)
     #exit()
     out = out.reshape(target.shape)#64, 1000, 2
-    out = out*32.0#fix this
+    assert torch.max(out)<1.1
+    assert torch.max(target)<1.1
+    
+    #out = out#fix this
     if not ret_out:
         return torch.mean((out-target)**2)
     else:
@@ -316,7 +319,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(1):
+for epoch in range(20):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -327,23 +330,23 @@ for epoch in range(1):
     optimizer.step()
   print('epoch',epoch,'loss',loss)
 
-# optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-# for epoch in range(1):
-#   for x,y in loader_train:
-#     optimizer.zero_grad()
-#     x = x.cuda()
-#     x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
-#     y = y.cuda()
-#     loss = mse_vit(x,y,model=model)
-#     loss.backward()
-#     optimizer.step()
-#   print('epoch',epoch,'loss',loss)
+for epoch in range(20):
+  for x,y in loader_train:
+    optimizer.zero_grad()
+    x = x.cuda()
+    x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
+    y = y.cuda()
+    loss = mse_vit(x,y,model=model)
+    loss.backward()
+    optimizer.step()
+  print('epoch',epoch,'loss',loss)
 
 
 
 model = model.eval()
-MutatedIcospheresDataset.displayCanvas('vit-training-1.png',loader_train, model = model)
+MutatedIcospheresDataset.displayCanvas('vit-training-3d.png',loader_train, model = model)
 
 
 dataset = MutatedIcospheresDataset(length = 100)
@@ -361,5 +364,5 @@ for x,y in loader_test:
   print('validation loss',loss)
   break
 
-MutatedIcospheresDataset.displayCanvas('vit-test-set-1-randomorder.png',loader_test, model = model)
+MutatedIcospheresDataset.displayCanvas('vit-test-set-3d.png',loader_test, model = model)
 
