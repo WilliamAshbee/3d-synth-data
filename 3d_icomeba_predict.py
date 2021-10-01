@@ -39,7 +39,7 @@ def getConvMatricies():
 x3dind,y3dind,z3dind,x2dind,y2dind = getConvMatricies()
 
 
-      
+#TODO: call from training  get2dfrom3d     
 
 def get2dfrom3d(a, ena = False):  
   global x3dind,y3dind,z3dind,x2dind,y2dind
