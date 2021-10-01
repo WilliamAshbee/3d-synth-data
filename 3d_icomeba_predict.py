@@ -51,7 +51,7 @@ def get2dfrom3d(a, ena = False):
     y = a.permute(0,2,1,3)
     z = a.permute(0,3,2,1)
 
-    x2d = torch.zeros((a.shape[0],64,64))
+    x2d = torch.zeros((a.shape[0],64,64)).cuda()
     y2d = torch.zeros_like(x2d)
     z2d = torch.zeros_like(x2d)
 
@@ -94,12 +94,12 @@ def get2dfrom3d(a, ena = False):
 
 
   else:
-    final2d = torch.zeros((a.shape[0],64,64))
+    final2d = torch.zeros((a.shape[0],64,64)).cuda()
     final2d[:,y2dind,x2dind] = a[:,y3dind,x3dind,z3dind]
     return final2d
 
 def checkPositionalMapping():
-    b = torch.zeros((16,16,16))
+    b = torch.zeros((16,16,16)).cuda()
 
     count = 0
     for j in range(16):
@@ -111,18 +111,18 @@ def checkPositionalMapping():
     c= b.detach().clone()
     m2dtransform = get2dfrom3d(c)
     for ii in range (b.shape[0]):
-      chk = torch.from_numpy(np.array([i for i in range(64)]))
+      chk = torch.from_numpy(np.array([i for i in range(64)])).cuda()
       temp = b[ii,:,:,:].reshape((64,64))
       
       assert (temp[0,:]!= chk).sum() == 0
       
       
       plt.clf()
-      plt.imshow(temp)
+      plt.imshow(temp.cpu().numpy())
       plt.savefig('2dbasicreshaping{}.png'.format(ii),dpi=600)
       
       plt.clf()
-      plt.imshow(m2dtransform[ii,:,:])
+      plt.imshow(m2dtransform[ii,:,:].cpu().numpy())
       plt.savefig('m2dtransform{}.png'.format(ii),dpi=1200)
       assert m2dtransform[ii,0,0] == 0
       assert m2dtransform[ii,0,1] == 1
@@ -394,7 +394,7 @@ loader_train = data.DataLoader(
 
 
 v = ViT(
-    image_size = (side,side*side),
+    image_size = (side*4,side*4),
     patch_size = 4,
     num_classes = 9002*3,
     dim = 2048,
@@ -432,29 +432,30 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(1):
+for epoch in range(20):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
-    x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
+    x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
     y = y.cuda()
+    #print('debugging shape',x.shape,y.shape)
     loss = mse_vit(x,y,model=model)
     loss.backward()
     optimizer.step()
   print('epoch',epoch,'loss',loss)
 
-# optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-# for epoch in range(20):
-#   for x,y in loader_train:
-#     optimizer.zero_grad()
-#     x = x.cuda()
-#     x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
-#     y = y.cuda()
-#     loss = mse_vit(x,y,model=model)
-#     loss.backward()
-#     optimizer.step()
-#   print('epoch',epoch,'loss',loss)
+for epoch in range(20):
+  for x,y in loader_train:
+    optimizer.zero_grad()
+    x = x.cuda()
+    x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
+    y = y.cuda()
+    loss = mse_vit(x,y,model=model)
+    loss.backward()
+    optimizer.step()
+  print('epoch',epoch,'loss',loss)
 
 
 
