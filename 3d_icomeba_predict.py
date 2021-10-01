@@ -15,6 +15,138 @@ from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 from vit_pytorch import ViT
 
+
+def getConvMatricies():
+  x3dind = []
+  y3dind = []
+  z3dind = []
+
+  x2dind = []
+  y2dind = []
+
+  for i in range(16):
+    for j in range(16):
+      for k in range(16):
+        x3dind.append(i)
+        y3dind.append(j)
+        z3dind.append(k)
+        
+        x2dind.append(i*4+k%4)
+        y2dind.append(j*4+k//4)
+  
+  return x3dind,y3dind,z3dind,x2dind,y2dind
+
+x3dind,y3dind,z3dind,x2dind,y2dind = getConvMatricies()
+
+
+      
+
+def get2dfrom3d(a, ena = False):  
+  global x3dind,y3dind,z3dind,x2dind,y2dind
+
+  if ena:
+    x = a.detach().clone()
+    # y = a.permute(1,0,2)
+    # z = a.permute(2,1,0)
+    y = a.permute(0,2,1,3)
+    z = a.permute(0,3,2,1)
+
+    x2d = torch.zeros((a.shape[0],64,64))
+    y2d = torch.zeros_like(x2d)
+    z2d = torch.zeros_like(x2d)
+
+    x2d[:,y2dind,x2dind] = x[:,y3dind,x3dind,z3dind]
+    y2d[:,y2dind,x2dind] = y[:,y3dind,x3dind,z3dind]
+    z2d[:,y2dind,x2dind] = z[:,y3dind,x3dind,z3dind]
+
+    print(x2d[:,y2dind,x2dind].shape,x[:,y3dind,x3dind,z3dind].shape)
+    print(y2d[:,y2dind,x2dind].shape,y[:,y3dind,x3dind,z3dind].shape)
+    print(z2d[:,y2dind,x2dind].shape,z[:,y3dind,x3dind,z3dind].shape)
+    print(x2d[:,y2dind,x2dind].sum(),x[:,y3dind,x3dind,z3dind].sum())
+    print(y2d[:,y2dind,x2dind].sum(),y[:,y3dind,x3dind,z3dind].sum())
+    print(z2d[:,y2dind,x2dind].sum(),z[:,y3dind,x3dind,z3dind].sum())
+    assert((x2d[:,y2dind,x2dind].type(torch.LongTensor)!=x[:,y3dind,x3dind,z3dind].type(torch.LongTensor)).sum() == 0)
+    assert((y2d[:,y2dind,x2dind].type(torch.LongTensor)!=y[:,y3dind,x3dind,z3dind].type(torch.LongTensor)).sum() == 0)
+    assert((z2d[:,y2dind,x2dind].type(torch.LongTensor)!=z[:,y3dind,x3dind,z3dind].type(torch.LongTensor)).sum() == 0)
+    # assert z2d[y2dind,x2dind].shape[0] == len(x2dind)
+    assert(int(y2d[:,y2dind,x2dind].sum())== int(y[:,y3dind,x3dind,z3dind].sum()))
+    assert(int(z2d[:,y2dind,x2dind].sum())== int(z[:,y3dind,x3dind,z3dind].sum()))
+    assert(int(x2d[:,y2dind,x2dind].sum())== int(y[:,y3dind,x3dind,z3dind].sum()))
+    assert(int(y2d[:,y2dind,x2dind].sum())== int(z[:,y3dind,x3dind,z3dind].sum()))
+    assert(int(y2d[:,y2dind,x2dind].sum())!= 0)
+    for length in range(a.shape[0]):
+      for i in range(16):
+        for j in range(16):
+          print('x2d,i,j,val',i,j,x2d[length,4*i:4*(i+1),j*4:(j+1)*4])
+
+    for length in range(a.shape[0]):
+      for i in range(16):
+        for j in range(16):
+          print('y2d,i,j,val',i,j,y2d[length,4*i:4*(i+1),j*4:(j+1)*4])
+    
+    for length in range(a.shape[0]):
+      for i in range(16):
+        for j in range(16):
+          print('z2d,i,j,val',i,j,z2d[length,4*i:4*(i+1),j*4:(j+1)*4])
+          if ena:
+            assert z2d[length,4*i:4*(i+1),j*4:(j+1)*4][0,1] == 1
+            assert z2d[length,4*i:4*(i+1),j*4:(j+1)*4][1,0] == 4
+
+
+  else:
+    final2d = torch.zeros((a.shape[0],64,64))
+    final2d[:,y2dind,x2dind] = a[:,y3dind,x3dind,z3dind]
+    return final2d
+
+def checkPositionalMapping():
+    b = torch.zeros((16,16,16))
+
+    count = 0
+    for j in range(16):
+      for i in range(16):
+        for k in range(16):
+          b[j,i,k] = count
+          count+=1 
+    b = b.repeat(2,1,1,1)
+    c= b.detach().clone()
+    m2dtransform = get2dfrom3d(c)
+    for ii in range (b.shape[0]):
+      chk = torch.from_numpy(np.array([i for i in range(64)]))
+      temp = b[ii,:,:,:].reshape((64,64))
+      
+      assert (temp[0,:]!= chk).sum() == 0
+      
+      
+      plt.clf()
+      plt.imshow(temp)
+      plt.savefig('2dbasicreshaping{}.png'.format(ii),dpi=600)
+      
+      plt.clf()
+      plt.imshow(m2dtransform[ii,:,:])
+      plt.savefig('m2dtransform{}.png'.format(ii),dpi=1200)
+      assert m2dtransform[ii,0,0] == 0
+      assert m2dtransform[ii,0,1] == 1
+      assert m2dtransform[ii,0,2] == 2
+      assert m2dtransform[ii,0,3] == 3
+      assert m2dtransform[ii,1,0] == 4
+      assert m2dtransform[ii,1,1] == 5
+      assert m2dtransform[ii,1,2] == 6
+      assert m2dtransform[ii,1,3] == 7
+      assert m2dtransform[ii,2,0] == 8
+      assert m2dtransform[ii,2,1] == 9
+      assert m2dtransform[ii,2,2] == 10
+      assert m2dtransform[ii,2,3] == 11
+      assert m2dtransform[ii,3,0] == 12
+      assert m2dtransform[ii,3,1] == 13
+      assert m2dtransform[ii,3,2] == 14
+      assert m2dtransform[ii,3,3] == 15
+      
+      assert m2dtransform[ii,0,4] == 16
+      assert m2dtransform[ii,4,0] == 256
+      assert m2dtransform[ii,4,1] == 257
+    
+checkPositionalMapping()#run unit test to check if the spatial properties of reshaping are preserved for a patch of size 4 currently
+
 def vmf(mu, kappa, x):
     # single point function
     d = mu.shape[0]
@@ -166,25 +298,6 @@ def plot_one(fig,img, xx, i=0):
     #print('gt size',gtx.shape,gty.shape,gtz.shape)
     ax.scatter(gtx, gty, gtz, marker = ',', c='black',s=.005,lw=.005)
 
-    #print('begin')
-    #print('xxshape', xx.shape)
-    #print('tempmax', torch.max(xx[:, 0]))
-
-    #gtx = torch.from_numpy(gtx)
-    #gty = torch.from_numpy(gty)
-    #gtz = torch.from_numpy(gtz)
-
-    #print('maxes')
-    #print("xx from points")
-    #print(torch.max(xx[:, 0]), torch.max(xx[:, 1]), torch.max(xx[:, 2]))
-    #print(torch.min(xx[:, 0]), torch.min(xx[:, 1]), torch.min(xx[:, 2]))
-    #print('from redx,redy,redz')
-    #print(torch.max(redx), torch.max(redy), torch.max(redz))
-    #print(torch.min(redx), torch.min(redy), torch.min(redz))
-    
-    #print('gtxyz from raster')
-    #print(torch.max(gtx), torch.max(gty), torch.max(gtz))
-    #print(torch.min(gtx), torch.min(gty), torch.min(gtz))
 
 
 def plot_all(sample=None, model=None, labels=None, i=0):
@@ -319,7 +432,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(20):
+for epoch in range(1):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -330,18 +443,18 @@ for epoch in range(20):
     optimizer.step()
   print('epoch',epoch,'loss',loss)
 
-optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+# optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-for epoch in range(20):
-  for x,y in loader_train:
-    optimizer.zero_grad()
-    x = x.cuda()
-    x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
-    y = y.cuda()
-    loss = mse_vit(x,y,model=model)
-    loss.backward()
-    optimizer.step()
-  print('epoch',epoch,'loss',loss)
+# for epoch in range(20):
+#   for x,y in loader_train:
+#     optimizer.zero_grad()
+#     x = x.cuda()
+#     x = x.reshape(mini_batch,1,side,side*side).repeat(1,3,1,1)
+#     y = y.cuda()
+#     loss = mse_vit(x,y,model=model)
+#     loss.backward()
+#     optimizer.step()
+#   print('epoch',epoch,'loss',loss)
 
 
 
