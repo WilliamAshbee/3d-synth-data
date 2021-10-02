@@ -384,7 +384,7 @@ MutatedIcospheresDataset.displayCanvas('mutatedicospheres.png', loader_demo, mod
 
 
 #mini_batch = 20
-train_dataset = MutatedIcospheresDataset(length = 100*2)
+train_dataset = MutatedIcospheresDataset(length = 1000*2)
 loader_train = data.DataLoader(
     train_dataset, 
     batch_size=mini_batch,
@@ -432,7 +432,7 @@ def mse_vit(input, target,model=None,ret_out = False):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
-for epoch in range(20):
+for epoch in range(400):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
@@ -446,7 +446,7 @@ for epoch in range(20):
 
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-for epoch in range(20):
+for epoch in range(400):
   for x,y in loader_train:
     optimizer.zero_grad()
     x = x.cuda()
