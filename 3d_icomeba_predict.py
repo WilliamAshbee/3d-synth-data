@@ -208,7 +208,7 @@ def createOneMutatedIcosphere():
     return xx
 
 
-np.random.seed(0)
+#np.random.seed(0)
 
 
 global numpoints
@@ -259,23 +259,15 @@ def mutated_icosphere_matrix(length=10,canvas_dim=8):
         y = xx[1,:]
         z = xx[2,:]
 
-        #print('xyzshape',x.shape,y.shape,z.shape)
-        
-        #print('x range',torch.max(x),torch.min(x))
-        #print('y range',torch.max(y),torch.min(y))
-        #print('z range',torch.max(z),torch.min(z))
-        
         points[l, :, 0] = x[:]  # modified for lstm discriminator
         points[l, :, 1] = y[:]  # modified for lstm discriminator
         points[l, :, 2] = z[:]  # modified for lstm discriminator
         
         canvas[l, (x*side*sf).type(torch.LongTensor), (y*side*sf).type(torch.LongTensor), (z*side*sf).type(torch.LongTensor)] = 1.0
 
-
     return {
         'canvas': canvas,
         'points': points.type(torch.FloatTensor)}
-
 
 def plot_one(fig,img, xx, i=0):
     print(xx.shape)
@@ -384,37 +376,12 @@ MutatedIcospheresDataset.displayCanvas('mutatedicospheres.png', loader_demo, mod
 
 
 #mini_batch = 20
-train_dataset = MutatedIcospheresDataset(length = 1000*2)
+train_dataset = MutatedIcospheresDataset(length = 1000*4)
 loader_train = data.DataLoader(
     train_dataset, 
     batch_size=mini_batch,
     sampler=RandomSampler(data_source=train_dataset),
     num_workers=4)
-
-
-
-v = ViT(
-    image_size = (side*4,side*4),
-    patch_size = 4,
-    num_classes = 9002*3,
-    dim = 2048,
-    depth = 6,
-    heads = 16,
-    mlp_dim = 2048,
-    dropout = 0.1,
-    emb_dropout = 0.1
-)
-
-v = torch.nn.Sequential(
-    v,
-    torch.nn.Sigmoid()
-)
-
-img = torch.randn(100, 3, 32, 32)
-
-preds = v(img) # (1, 1000)
-
-model = v.cuda()
 
 def mse_vit(input, target,model=None,ret_out = False):
     out = model(input)
@@ -430,38 +397,6 @@ def mse_vit(input, target,model=None,ret_out = False):
     else:
         return torch.mean((out-target)**2),out
 
-optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
-
-for epoch in range(400):
-  for x,y in loader_train:
-    optimizer.zero_grad()
-    x = x.cuda()
-    x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
-    y = y.cuda()
-    #print('debugging shape',x.shape,y.shape)
-    loss = mse_vit(x,y,model=model)
-    loss.backward()
-    optimizer.step()
-  print('epoch',epoch,'loss',loss)
-
-optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
-
-for epoch in range(400):
-  for x,y in loader_train:
-    optimizer.zero_grad()
-    x = x.cuda()
-    x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
-    y = y.cuda()
-    loss = mse_vit(x,y,model=model)
-    loss.backward()
-    optimizer.step()
-  print('epoch',epoch,'loss',loss)
-
-
-
-model = model.eval()
-MutatedIcospheresDataset.displayCanvas('vit-training-3d.png',loader_train, model = model)
-
 
 dataset = MutatedIcospheresDataset(length = 100)
 loader_test = data.DataLoader(
@@ -470,13 +405,86 @@ loader_test = data.DataLoader(
     sampler=RandomSampler(data_source=dataset),
     num_workers=4)
 
-#model = model.eval()
-for x,y in loader_test:
-  x = x.cuda()
-  y = y.cuda()
-  loss = mse_vit(x,y,model=model)
-  print('validation loss',loss)
-  break
+for i in range(20):
+  dim = np.random.choice([2**10,2**11,2**12,2**13])
+  depth = np.random.choice([i for i in range (2,16)])#search over depth
+  heads = np.random.choice([i for i in range (5,25)])
+  mlp_dim = np.random.choice([2**10,2**11,2**12,2**13])#search over mlp_dim
 
-MutatedIcospheresDataset.displayCanvas('vit-test-set-3d.png',loader_test, model = model)
+  try:
+  
+    model = ViT(
+        image_size = (side*4,side*4),
+        patch_size = 4,
+        num_classes = 9002*3,
+        dim = dim,#search over dim
+        depth = depth,#search over depth
+        heads = heads,#search over heads
+        mlp_dim = mlp_dim,#search over mlp_dim
+        dropout = 0.1,
+        emb_dropout = 0.1
+    )
 
+
+    model = torch.nn.Sequential(
+        model,
+        torch.nn.Sigmoid()
+    )
+
+    model = model.cuda()
+
+    torch.cuda.empty_cache()
+    optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
+
+
+    for epoch in range(1000):
+      for x,y in loader_train:
+        optimizer.zero_grad()
+        x = x.cuda()
+        x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
+        y = y.cuda()
+        #print('debugging shape',x.shape,y.shape)
+        loss = mse_vit(x,y,model=model)
+        loss.backward()
+        optimizer.step()
+      print('epoch',epoch,'loss',loss)
+
+    optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+
+    for epoch in range(1000):
+      for x,y in loader_train:
+        optimizer.zero_grad()
+        x = x.cuda()
+        x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
+        y = y.cuda()
+        loss = mse_vit(x,y,model=model)
+        loss.backward()
+        optimizer.step()
+      print('epoch',epoch,'loss',loss)
+
+    loss_train = loss.item()
+
+    model = model.eval()
+    MutatedIcospheresDataset.displayCanvas('vit-training-3d_{:10.8f}_{}_{}_{}_{}.png'.format(
+      loss_train,dim,mlp_dim,heads,depth),loader_train, model = model)
+
+    for x,y in loader_test:
+      x = x.cuda()
+      y = y.cuda()
+      loss = mse_vit(x,y,model=model)
+      print('validation loss',loss)
+      break
+    
+    loss_test = loss.item()
+    torch.save(model.state_dict(), '/home/users/washbee1/projects/3d-synthd/models/model_{:10.8f}_{:10.8f}_{}_{}_{}_{}_1000.pth'.format(
+      loss_train,loss_test,dim,mlp_dim,heads,depth))
+
+    MutatedIcospheresDataset.displayCanvas('vit-test-set-3d_{:10.8f}_{:10.8f}_{}_{}_{}_{}.png'.format(
+      loss_train,loss_test,dim,mlp_dim,heads,depth),loader_test, model = model)
+  except RuntimeError as e:
+    model = None
+    torch.cuda.empty_cache()
+    print(heads,depth,dim,mlp_dim,'has error')
+    continue
+  
+    
