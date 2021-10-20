@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -n 1
 #SBATCH -c 10
-#SBATCH --mem=32g
+#SBATCH --mem=30g
 #SBATCH -p qTRDGPUH
 #SBATCH --gres=gpu:v100:1
-#SBATCH -t 600
+#SBATCH -t 6000
 #SBATCH -J wa-mutico
 #SBATCH -e jobs/error%A.err
 #SBATCH -o jobs/out%A.out
@@ -13,11 +13,14 @@
 #SBATCH --mail-user=washbee1@student.gsu.edu
 #SBATCH --oversubscribe
 
-sleep 10s
+sleep 5s
 
 export PATH=/data/users2/washbee/anaconda3/bin:$PATH
 source /data/users2/washbee/anaconda3/etc/profile.d/conda.sh
 conda activate /data/users2/washbee/anaconda3/envs/c3d-synthd
-python 3d_icomeba_predict.py 
+python vit3d_train.py --arg1 $SLURM_ARRAY_TASK_ID --arg2 0 &
+python vit3d_train.py --arg1 $SLURM_ARRAY_TASK_ID --arg2 1 &
+gpustat -i 100 &
+wait
 
-sleep 30s
+sleep 10s
