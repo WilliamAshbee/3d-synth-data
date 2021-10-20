@@ -424,6 +424,7 @@ for i in range(20):
         dropout = 0.1,
         emb_dropout = 0.1
     )
+    
 
 
     model = torch.nn.Sequential(
