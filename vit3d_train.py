@@ -319,14 +319,15 @@ heads = np.random.choice([i for i in range (5,25)])
 mlp_dim = np.random.choice([2**10,2**11,2**12,2**13])#search over mlp_dim
 
 try:
+    #dim,mlp_dim,heads,depth = 2048,2048,16,6
     model = ViT3d(
         image_size = 16,
         patch_size = 4,
         num_classes = 9002*3,
-        dim = 2048,
-        depth = 6,
-        heads = 16,
-        mlp_dim = 2048,
+        dim = dim, 
+        depth = depth,
+        heads = heads,
+        mlp_dim = mlp_dim,
         dropout = 0.1,
         emb_dropout = 0.1,
         channels=1
@@ -341,7 +342,7 @@ try:
     model = model.cuda()
     torch.cuda.empty_cache()
     optimizer = torch.optim.Adam(model.parameters(),lr = 0.001, betas = (.9,.999))#ideal
-    for epoch in range(1000):
+    for epoch in range(100):
         for x,y in loader_train:
             optimizer.zero_grad()
             x = x.cuda()
@@ -354,7 +355,20 @@ try:
         print(seed,'epoch',epoch,'loss',loss)
 
     optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
-
+    print('seed is changing learning rate to .0001', seed)
+    for epoch in range(1000):
+        for x,y in loader_train:
+            optimizer.zero_grad()
+            x = x.cuda()
+            #x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
+            y = y.cuda()
+            loss = mse_vit(x,y,model=model)
+            loss.backward()
+            optimizer.step()
+        print(seed,'epoch',epoch,'loss',loss)
+    
+    optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+    print('seed is changing learning rate to .00001', seed)
     for epoch in range(1000):
         for x,y in loader_train:
             optimizer.zero_grad()
