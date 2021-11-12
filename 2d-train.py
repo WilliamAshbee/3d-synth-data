@@ -66,7 +66,7 @@ def createDataset(pltFig=True, numFigs=100, numPoints=1000):
         xx = x[k, :, :] * w[0]
         it = 10
         for i in range(it):
-            kappa = 50#np.random.randint(5, 100)
+            kappa = np.random.randint(5, 100)
             mu = np.random.randn(2);
             mu = mu / np.linalg.norm(mu)
             y = apply_vmf(xnormed, mu, kappa)
@@ -275,7 +275,7 @@ optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#
 
 
 print('begin')
-for epoch in range(10):
+for epoch in range(100):
   for x,y in loader_train:
     optimizer.zero_grad()
     if useGPU:
@@ -289,7 +289,7 @@ for epoch in range(10):
 print('begin')
 optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-for epoch in range(10):
+for epoch in range(100):
   for x,y in loader_train:
     optimizer.zero_grad()
     if useGPU:
@@ -301,7 +301,7 @@ for epoch in range(10):
   print('epoch',epoch,'loss',loss)
 
 model = model.eval()
-DonutDataset.displayCanvas('vit-training-1.png',loader_train, model = model)
+DonutDataset.displayCanvas('vit-training-kappainc.png',loader_train, model = model)
 
 
 from torch.utils import data
@@ -322,6 +322,6 @@ for x,y in loader_test:
   print('validation loss',loss)
   break
 
-DonutDataset.displayCanvas('vit-test-set-1.png',loader_test, model = model)
+DonutDataset.displayCanvas('vit-test-set-kappainc.png',loader_test, model = model)
 
 ###
