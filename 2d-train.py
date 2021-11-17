@@ -23,8 +23,8 @@ mini_batch = 100
 #xbaseline = np.random.randn(2, 1000)
 
 theta = np.linspace(0.0, 2*3.14159, num=1000)
-x  = np.cos(theta)
-y  = np.sin(theta)
+x = np.cos(theta)
+y = np.sin(theta)
 xbaseline = np.zeros((2,1000))
 xbaseline[0,:] = x
 xbaseline[1,:] = y
