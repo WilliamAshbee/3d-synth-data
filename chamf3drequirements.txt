@@ -1,0 +1,45 @@
+certifi==2021.10.8
+charset-normalizer==2.0.7
+colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1602866480661/work
+cycler==0.11.0
+einops==0.3.2
+fonttools==4.28.5
+freesurfer-surface==2.0.0
+fvcore==0.1.5.post20210915
+idna==3.3
+install==1.3.5
+iopath==0.1.9
+joblib==1.1.0
+kiwisolver==1.3.2
+matplotlib==3.5.1
+mkl-fft==1.3.1
+mkl-random @ file:///tmp/build/80754af9/mkl_random_1626179032232/work
+mkl-service==2.4.0
+nibabel==3.2.1
+nilearn==0.8.1
+numpy==1.21.4
+olefile==0.46
+packaging==21.3
+pandas==1.3.4
+Pillow==8.4.0
+portalocker @ file:///home/conda/feedstock_root/build_artifacts/portalocker_1636955719077/work
+pyparsing==3.0.6
+python-dateutil==2.8.2
+pytorch3d==0.6.1
+pytz==2021.3
+PyYAML==5.3.1
+requests==2.26.0
+scikit-learn==1.0.2
+scipy==1.7.3
+six @ file:///tmp/build/80754af9/six_1623709665295/work
+tabulate @ file:///home/conda/feedstock_root/build_artifacts/tabulate_1614001031686/work
+termcolor==1.1.0
+threadpoolctl==3.0.0
+torch==1.7.1
+torchaudio==0.7.0a0+a853dff
+torchvision==0.8.2
+tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1632160078689/work
+typing-extensions @ file:///tmp/build/80754af9/typing_extensions_1631814937681/work
+urllib3==1.26.7
+vit-pytorch @ file:///home/users/washbee1/projects/3d-synthd/latest.zip
+yacs==0.1.6
