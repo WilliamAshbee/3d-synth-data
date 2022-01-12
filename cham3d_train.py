@@ -1,3 +1,5 @@
+from pytorch3d.loss import chamfer_distance
+
 from vit_pytorch import *
 import torch
 import argparse
@@ -207,7 +209,7 @@ def plot_all(sample=None, model=None, labels=None, i=0):
         with torch.no_grad():
             global numpoints
 
-            loss, out = mse_vit(sample.cuda(), labels.cuda(), model=model, ret_out=True)
+            loss, out = chamfer_loss(sample.cuda(), labels.cuda(), model=model, ret_out=True)
             fig = plt.figure()
             for i in range(mini_batch):
                 img = sample[i,0, :, :,:].squeeze().cpu().numpy()
@@ -289,25 +291,47 @@ loader_train = data.DataLoader(
     sampler=RandomSampler(data_source=train_dataset),
     num_workers=4)
 
-def mse_vit(input, target,model=None,ret_out = False):
+# def chamfer_loss(input, target,model=None,ret_out = False):
+#     try:
+#         assert input.shape == (20,1,16,16,16)
+#         out = model(input)
+#     except:
+#         print(seed,'input',input.shape)
+#         import traceback
+#         print(seed,traceback.format_exc())
+#         exit()
+    
+#     out = out.reshape(target.shape)#64, 1000, 2
+#     assert torch.max(out)<1.1
+#     assert torch.max(target)<1.1
+    
+#     #out = out#fix this
+#     if not ret_out:
+#         return torch.mean((out-target)**2)
+#     else:
+#         return torch.mean((out-target)**2),out
+def chamfer_loss(input, target,model=None,ret_out = False):
     try:
         assert input.shape == (20,1,16,16,16)
         out = model(input)
+        out = out.reshape(target.shape)
+        print('dop',distOfPred(out.detach().clone()))
+        print('outsape',out.shape)
+        loss,_ = chamfer_distance(out,target)
     except:
         print(seed,'input',input.shape)
         import traceback
         print(seed,traceback.format_exc())
         exit()
-    
-    out = out.reshape(target.shape)#64, 1000, 2
-    assert torch.max(out)<1.1
-    assert torch.max(target)<1.1
-    
-    #out = out#fix this
+
     if not ret_out:
-        return torch.mean((out-target)**2)
+        return loss
     else:
-        return torch.mean((out-target)**2),out
+        return loss,out
+
+    
+    #loss = (torch.mean(dist1)) + (torch.mean(dist2))
+    return loss
 
 
 dataset = MutatedIcospheresDataset(length = 20)
@@ -323,7 +347,15 @@ mlp_dim = np.random.choice([4096])#search over mlp_dim
 heads = np.random.choice([i for i in range (14,22)])
 depth = np.random.choice([i for i in range (9,13)])#search over depth
 
-
+def distOfPred(a):
+    total = 0.0
+    count = 0
+    for i in range(a.shape[0]):
+        for j in range(i,a.shape[0]):
+            total += torch.mean(torch.abs(a[i,:,:]-a[j,:,:]))
+            count+=1
+    return total/float(count)
+    
 try:
     #dim,mlp_dim,heads,depth = 2048,2048,16,6
     model = ViT3d(
@@ -355,7 +387,7 @@ try:
             assert x.shape == (20,1,16,16,16)
 
             y = y.cuda()
-            loss = mse_vit(x,y,model=model)
+            loss = chamfer_loss(x,y,model=model)
             loss.backward()
             optimizer.step()
         print(seed,'epoch',epoch,'loss',loss)
@@ -363,30 +395,30 @@ try:
     optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
     print('seed is changing learning rate to .0001', seed)
     #for epoch in range(500):
-    for epoch in range(40):
+    for epoch in range(10):
         for x,y in loader_train:
             optimizer.zero_grad()
             x = x.cuda()
             #x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
             y = y.cuda()
-            loss = mse_vit(x,y,model=model)
+            loss = chamfer_loss(x,y,model=model)
             loss.backward()
             optimizer.step()
         print(seed,'epoch',epoch,'loss',loss)
     
-    optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
-    print('seed is changing learning rate to .00001', seed)
+    # optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
+    # print('seed is changing learning rate to .00001', seed)
     #for epoch in range(500):
-    for epoch in range(40):
-        for x,y in loader_train:
-            optimizer.zero_grad()
-            x = x.cuda()
-            #x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
-            y = y.cuda()
-            loss = mse_vit(x,y,model=model)
-            loss.backward()
-            optimizer.step()
-        print(seed,'epoch',epoch,'loss',loss)
+    # for epoch in range(5):
+    #     for x,y in loader_train:
+    #         optimizer.zero_grad()
+    #         x = x.cuda()
+    #         #x = get2dfrom3d(x).unsqueeze(1).repeat(1,3,1,1)
+    #         y = y.cuda()
+    #         loss = chamfer_loss(x,y,model=model)
+    #         loss.backward()
+    #         optimizer.step()
+    #     print(seed,'epoch',epoch,'loss',loss)
 
     loss_train = loss.item()
 
@@ -398,7 +430,7 @@ try:
         x = x.cuda()
         assert x.shape == (20,1,16,16,16)
         y = y.cuda()
-        loss = mse_vit(x,y,model=model)
+        loss = chamfer_loss(x,y,model=model)
         print(seed,'validation loss',loss)
         break
 

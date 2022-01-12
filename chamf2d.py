@@ -1,3 +1,5 @@
+from pytorch3d.loss import chamfer_distance
+
 from scipy.special import spherical_jn as besseli
 import numpy as np
 from scipy import *
@@ -153,9 +155,9 @@ def plot_all(sample=None, model=None, labels=None, i=0):
 
             print('preloss')
             if useGPU:
-                loss, out = mse_vit(sample.cuda(), labels.cuda(), model=model, ret_out=True)
+                loss, out = chamfer_loss(sample.cuda(), labels.cuda(), model=model, ret_out=True)
             else:
-                loss, out = mse_vit(sample, labels, model=model, ret_out=True)
+                loss, out = chamfer_loss(sample, labels, model=model, ret_out=True)
 
             print('loss', loss)
 
@@ -272,20 +274,47 @@ loader_test = data.DataLoader(
 #import numpy as np
 #mind = np.random.randint(10)
 import models
-def mse_vit(input, target,model=None,ret_out = False):
+# def chamfer_loss(input, target,model=None,ret_out = False):
+#     try:
+#         out = models.predict(model,input)
+#     except RuntimeError as e:
+#         model = None
+#         torch.cuda.empty_cache()
+#         print(mind,'has error')
+#         return None
+#     out = out.reshape(target.shape)#64, 1000, 2
+#     out = out
+#     if not ret_out:
+#         return torch.mean((out-target)**2)
+#     else:
+#         return torch.mean((out-target)**2),out
+
+def distOfPred(a):
+    total = 0.0
+    count = 0
+    for i in range(a.shape[0]):
+        for j in range(i,a.shape[0]):
+            total += torch.mean(torch.abs(a[i,:,:]-a[j,:,:]))
+            count+=1
+    return total/float(count)
+
+def chamfer_loss(input, target,model=None,ret_out = False):
     try:
-        out = models.predict(model,input)
-    except RuntimeError as e:
-        model = None
-        torch.cuda.empty_cache()
-        print(mind,'has error')
-        return None
-    out = out.reshape(target.shape)#64, 1000, 2
-    out = out
+        out = model(input)
+        out = out.reshape(target.shape)
+        print('dop',distOfPred(out.detach().clone()))
+        
+        loss,_ = chamfer_distance(out,target.float())
+    except:
+        import traceback
+        print(traceback.format_exc())
+        exit()
+
     if not ret_out:
-        return torch.mean((out-target)**2)
+        return loss
     else:
-        return torch.mean((out-target)**2),out
+        return loss,out
+
     
 for mind in range(10):
     print('------------mind is ',mind)
@@ -313,7 +342,7 @@ for mind in range(10):
             if useGPU:
                 x = x.cuda()
                 y = y.cuda()
-            loss_train = mse_vit(x,y,model=model)
+            loss_train = chamfer_loss(x,y,model=model)
             if loss_train == None:
                 break    
             loss_train.backward()
@@ -333,7 +362,7 @@ for mind in range(10):
             if useGPU:
                 x = x.cuda()
                 y = y.cuda()
-            loss_train = mse_vit(x,y,model=model)
+            loss_train = chamfer_loss(x,y,model=model)
             loss_train.backward()
             optimizer.step()
         print('epoch',epoch,'loss',loss_train)
@@ -350,7 +379,7 @@ for mind in range(10):
         if useGPU:
             x = x.cuda()
             y = y.cuda()
-        loss_test = mse_vit(x,y,model=model)
+        loss_test = chamfer_loss(x,y,model=model)
         print('validation loss',loss_test)
         break
 
