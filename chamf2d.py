@@ -45,9 +45,9 @@ def vmf(mu, kappa, x):
         (2 * np.pi) ** (d / 2) * besseli(d // 2 - 1, kappa)) + kappa * np.dot(mu, x)
     return np.exp(logvmf)
 
-def bbox1_2d(img):
+def bbox(img):
     a = np.where(img != 0)    
-    return np.array([np.min(a[0]),np.min(a[1])]),np.array([np.max(a[0]),np.max(a[1])])
+    return np.min(a[0]),np.min(a[1]),np.max(a[0]),np.max(a[1])
 
 def apply_vmf(x, mu, kappa, norm=1.0):
     delta = 1.0 + vmf(mu, kappa, x)
@@ -181,6 +181,7 @@ def plot_all(sample=None, model=None, labels=None, i=0):
 
 
 class DonutDataset(torch.utils.data.Dataset):
+    
     """Donut dataset."""
 
     def __init__(self, length=10):
@@ -193,6 +194,7 @@ class DonutDataset(torch.utils.data.Dataset):
         """
         self.length = length
         self.values = convex_combination_matrix(length)
+        
         assert self.values['canvas'].shape[0] == self.length
         assert self.values['points'].shape[0] == self.length
 
@@ -205,16 +207,19 @@ class DonutDataset(torch.utils.data.Dataset):
 
         canvas = canvas[idx, :, :]
 
-        
-
+        min0,min1,max0,max1 = bbox(canvas)
+        canvas = canvas[min0:(max0+1),min1:(max1+1)]
+        #reshape
         points = self.values["points"]
         points = points[idx, :]
+        points[:,0] = (points[:,0]-torch.min(points[:,0]))/(torch.max(points[:,0])-torch.min(points[:,0]))
+        points[:,1] = (points[:,1]-torch.min(points[:,1]))/(torch.max(points[:,1])-torch.min(points[:,1]))
         if len(canvas.shape) == 2:
             canvas = torch.stack([canvas, canvas, canvas], dim=0)
         else:
             canvas = torch.stack([canvas, canvas, canvas], dim=1)
 
-        
+        canvas = F.resize(canvas, side)
         return canvas, points
 
     @staticmethod
@@ -309,7 +314,7 @@ def chamfer_loss(input, target,model=None,ret_out = False):
     try:
         out = model(input)
         out = out.reshape(target.shape)
-        print('dop',distOfPred(out.detach().clone()))
+        #print('dop',distOfPred(out.detach().clone()))
         
         loss,_ = chamfer_distance(out,target.float())
     except:
@@ -323,81 +328,82 @@ def chamfer_loss(input, target,model=None,ret_out = False):
         return loss,out
 
     
-for mind in range(10):
-    print('------------mind is ',mind)
-    v = None
-    try:
-        v = models.getModel(mind)
-    except RuntimeError as e:
-        model = None
-        torch.cuda.empty_cache()
-        print(mind,'has error')
-        continue
-    
-    if useGPU:
-        model = v.cuda()
-    else:
-        model = v
+#for mind in range(10):
+mind = 2
+print('------------mind is ',mind)
+v = None
+try:
+    v = models.getModel(mind)
+except RuntimeError as e:
+    model = None
+    torch.cuda.empty_cache()
+    print(mind,'has error')
+    exit()
 
-    optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
+if useGPU:
+    model = v.cuda()
+else:
+    model = v
 
-
-    print('begin')
-    for epoch in range(100):
-        for x,y in loader_train:
-            optimizer.zero_grad()
-            if useGPU:
-                x = x.cuda()
-                y = y.cuda()
-            loss_train = chamfer_loss(x,y,model=model)
-            if loss_train == None:
-                break    
-            loss_train.backward()
-            optimizer.step()
-        if loss_train == None:
-            break
-        print('epoch',epoch,'loss',loss_train)
-    
-    if loss_train == None:
-        continue
-    print('begin')
-    optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
-
-    for epoch in range(100):
-        for x,y in loader_train:
-            optimizer.zero_grad()
-            if useGPU:
-                x = x.cuda()
-                y = y.cuda()
-            loss_train = chamfer_loss(x,y,model=model)
-            loss_train.backward()
-            optimizer.step()
-        print('epoch',epoch,'loss',loss_train)
-
-    model = model.eval()
-    #DonutDataset.displayCanvas('vit-training-kappainc.png',loader_train, model = model)
-    DonutDataset.displayCanvas('vit-training-2d_{:10.8f}_{}.png'.format(
-        loss_train,mind),loader_train, model = model)
+optimizer = torch.optim.Adam(model.parameters(),lr = 0.0001, betas = (.9,.999))#ideal
 
 
-    
-
-    for x,y in loader_test:
+print('begin')
+for epoch in range(100):
+    for x,y in loader_train:
+        optimizer.zero_grad()
         if useGPU:
             x = x.cuda()
             y = y.cuda()
-        loss_test = chamfer_loss(x,y,model=model)
-        print('validation loss',loss_test)
+        loss_train = chamfer_loss(x,y,model=model)
+        if loss_train == None:
+            break    
+        loss_train.backward()
+        optimizer.step()
+    if loss_train == None:
         break
+    print('epoch',epoch,'loss',loss_train)
 
-    torch.save(model.state_dict(), '/home/users/washbee1/projects/3d-synthd/models/model_{:10.8f}_{:10.8f}_{}.pth'.format(
-        loss_train,loss_test,mind))
-    # DonutDataset.displayCanvas('vit-test-set-2d_{:10.8f}_{:10.8f}_{}_{}_{}_{}.png'.format(
-    #       loss_train,loss_test,dim,mlp_dim,heads,depth),loader_test, model = model)
-    DonutDataset.displayCanvas('vit-test-set-2d_{:10.8f}_{:10.8f}_{}.png'.format(
-        loss_train,loss_test,mind),loader_test, model = model)
-    ###
+if loss_train == None:
+    exit()
+print('begin')
+# optimizer = torch.optim.Adam(model.parameters(),lr = 0.00001, betas = (.9,.999))#ideal
 
-    model = None
-    torch.cuda.empty_cache()
-    #time.sleep(10.0)
+# for epoch in range(1):
+#     for x,y in loader_train:
+#         optimizer.zero_grad()
+#         if useGPU:
+#             x = x.cuda()
+#             y = y.cuda()
+#         loss_train = chamfer_loss(x,y,model=model)
+#         loss_train.backward()
+#         optimizer.step()
+#     print('epoch',epoch,'loss',loss_train)
+
+model = model.eval()
+#DonutDataset.displayCanvas('vit-training-kappainc.png',loader_train, model = model)
+DonutDataset.displayCanvas('vit-training-2d_{:10.8f}_{}.png'.format(
+    loss_train,mind),loader_train, model = model)
+
+
+
+
+for x,y in loader_test:
+    if useGPU:
+        x = x.cuda()
+        y = y.cuda()
+    loss_test = chamfer_loss(x,y,model=model)
+    print('validation loss',loss_test)
+    break
+
+torch.save(model.state_dict(), '/home/users/washbee1/projects/3d-synthd/models/model_{:10.8f}_{:10.8f}_{}.pth'.format(
+    loss_train,loss_test,mind))
+# DonutDataset.displayCanvas('vit-test-set-2d_{:10.8f}_{:10.8f}_{}_{}_{}_{}.png'.format(
+#       loss_train,loss_test,dim,mlp_dim,heads,depth),loader_test, model = model)
+DonutDataset.displayCanvas('vit-test-set-2d_{:10.8f}_{:10.8f}_{}.png'.format(
+    loss_train,loss_test,mind),loader_test, model = model)
+###
+
+model = None
+torch.cuda.empty_cache()
+#time.sleep(10.0)
