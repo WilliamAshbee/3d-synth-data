@@ -1,3 +1,5 @@
+import torchvision.transforms.functional as F
+
 from pytorch3d.loss import chamfer_distance
 
 from scipy.special import spherical_jn as besseli
@@ -43,6 +45,9 @@ def vmf(mu, kappa, x):
         (2 * np.pi) ** (d / 2) * besseli(d // 2 - 1, kappa)) + kappa * np.dot(mu, x)
     return np.exp(logvmf)
 
+def bbox1_2d(img):
+    a = np.where(img != 0)    
+    return np.array([np.min(a[0]),np.min(a[1])]),np.array([np.max(a[0]),np.max(a[1])])
 
 def apply_vmf(x, mu, kappa, norm=1.0):
     delta = 1.0 + vmf(mu, kappa, x)
@@ -200,6 +205,7 @@ class DonutDataset(torch.utils.data.Dataset):
 
         canvas = canvas[idx, :, :]
 
+        
 
         points = self.values["points"]
         points = points[idx, :]
@@ -208,6 +214,7 @@ class DonutDataset(torch.utils.data.Dataset):
         else:
             canvas = torch.stack([canvas, canvas, canvas], dim=1)
 
+        
         return canvas, points
 
     @staticmethod
